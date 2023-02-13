@@ -1,33 +1,20 @@
-import asyncio
-import datetime
 import logging
-# import re
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from pyrogram import Client, errors
-from pyrogram.types import Message
 
-import exceptions
 import settings
-from db.connector import database_connector
-from common.decorators import handle_common_exceptions_decorator
-#from common.models import AnnounceJobStats, AnnouncePreferences
-import exceptions
-#from helpers.notify import notify_admin
-from helpers.base import BaseHelper, api_adapter_module
-from helpers.state import redis_connector
+# from common.models import AnnounceJobStats, AnnouncePreferences
+# from helpers.notify import notify_admin
 from addons.Telemetry import (
     send_telemetry,
     MeasurementLabelTypeValue,
-    TelemetryEvent,
     TelemetryEventName,
     TelemetryMeasurement,
     TelemetryMeasurementLabels,
-    EventLabelResultStatusValue,
-    EventLabelUserActionTypeValue,
-    ExternalAPIEventLabels,
 )
-from models import BotModule
+from db.connector import database_connector
+
+# import re
 
 
 log = logging.getLogger(__name__)
@@ -202,72 +189,3 @@ async def send_user_stats():
             event_labels=TelemetryMeasurementLabels(measurement_type=MeasurementLabelTypeValue.total_registrations),
             value=user_count,
         ))
-
-
-async def get_channel_stats(
-    client: Client,
-    helper_class: BaseHelper,
-    message: Message,
-    module: BotModule,
-) -> None:
-    custom_error_message: str = getattr(module, 'error_text', api_adapter_module.unhandled_error_text)
-
-    try:
-        result_status = EventLabelResultStatusValue.success
-        helper_data = await helper_class(message).search_results
-    except exceptions.AccountIsPrivate:
-        result_status = EventLabelResultStatusValue.account_is_private
-        await message.reply(text=api_adapter_module.error_text_account_private, reply_to_message_id=message.id)
-    except exceptions.AccountNotExist:
-        result_status = EventLabelResultStatusValue.account_not_exists
-        await message.reply(text=api_adapter_module.error_text_account_not_found, reply_to_message_id=message.id)
-    except exceptions.EmptyResultsException:
-        result_status = EventLabelResultStatusValue.empty
-        await message.reply(text=custom_error_message, reply_to_message_id=message.id)
-    except exceptions.ThirdPartyApiException:
-        result_status = EventLabelResultStatusValue.error
-        await message.reply(api_adapter_module.unhandled_error_text)
-        raise  # unhanled error, let top-level decorator to know about it
-    except exceptions.WrongInputException:
-        result_status = EventLabelResultStatusValue.wrong_input
-        await message.reply(text=api_adapter_module.wrong_input_text, reply_to_message_id=message.id)
-    else:
-        text = f'{module.header_text}\n'
-        text += module.result_text.format(
-            channel_link=message.text,
-            publications=helper_data['publications'],
-            subscribers=helper_data['subscribers'],
-            subscribers_delta_today=helper_data['subscribers_delta_today'],
-            subscribers_delta_month=helper_data['subscribers_delta_month'],
-            subscribers_delta_week=helper_data['subscribers_delta_week'],
-            citation_index=helper_data['citation_index'],
-            average_single_publication_views=helper_data['average_single_publication_views'],
-            average_single_publication_ad_views=helper_data['average_single_publication_ad_views'],
-            average_single_publication_ad_views_12h=helper_data['average_single_publication_ad_views_12h'],
-            average_single_publication_ad_views_24h=helper_data['average_single_publication_ad_views_24h'],
-            average_single_publication_ad_views_48h=helper_data['average_single_publication_ad_views_48h'],
-            average_interest=helper_data['average_interest'],
-            average_interest_daily=helper_data['average_interest_daily'],
-            channel_age_days=helper_data['channel_age_days'],
-            channel_created_at=datetime.datetime.strptime(
-                helper_data['channel_created_at'], '%Y-%m-%dT%H:%M:%S'
-            ).strftime('%d.%m.%Y'),
-        ).strip()
-        text += f'\n\n{module.footer_text}'
-
-        await message.reply(
-            text=text,
-            reply_to_message_id=message.id,
-            reply_markup=module.share_keyboard,
-            disable_web_page_preview=True,
-        )
-    finally:
-        labels_kwargs = dict(
-            provider='TgStat',
-            status=result_status,
-        )
-        await send_telemetry(
-            TelemetryEvent(
-                event_labels=ExternalAPIEventLabels(**labels_kwargs),
-                event_name=TelemetryEventName.tgbot_external_api_event,
-            ))

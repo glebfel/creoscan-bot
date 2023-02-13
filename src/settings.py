@@ -72,22 +72,12 @@ DB_PORT = env('DB_PORT')
 REDIS_HOST = env('REDIS_HOST')
 REDIS_PORT = env('REDIS_PORT')
 
-# SMP
-SMP_PLATFORM_METRICS_EVENTS_URL = env('SMP_PLATFORM_METRICS_EVENTS_URL')
-SMP_PLATFORM_METRICS_MEASUREMENTS_URL = env('SMP_PLATFORM_METRICS_MEASUREMENTS_URL')
-
-SMP_APP_ID = env('SMP_APP_ID')
-SMP_APP_SECRET = env('SMP_APP_SECRET')
-SMP_BASE_URL = env('SMP_BASE_URL')
-
 if env('LOG_LEVEL') == 'DEBUG':
     LOG_LEVEL = logging.DEBUG
 else:
     LOG_LEVEL = logging.INFO
 
 # ThirdParty API
-LAMADAVA_URL = env('LAMADAVA_URL')
-LAMADAVA_KEY = env('LAMADAVA_KEY')
 RAPIDAPI_URL = env('RAPIDAPI_URL')
 RAPIDAPI_EDGE = env('RAPIDAPI_EDGE')
 RAPIDAPI_KEY = env('RAPIDAPI_KEY')
@@ -116,8 +106,6 @@ ANNOUNCE_PACK_LENGTH = 20
 CONFIG_PATH = 'configs/datafan.yaml'
 PLUGINS = [
     'Introduction.core',
-    'TgStat.core',
-    'PublicationTime.core',
     'Support.core',
     'Common.core',
 ]

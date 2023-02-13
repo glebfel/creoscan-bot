@@ -8,6 +8,7 @@ from random import randint
 from pyrogram import errors
 from pyrogram.types import Message
 
+import exceptions
 import settings
 from common.models import MessagePreferences
 from exceptions import UnrecognizedException

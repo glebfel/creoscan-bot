@@ -22,7 +22,6 @@ log = logging.getLogger(__name__)
 
 
 @Client.on_message(filters.text)
-@SendUserActionEventDecorator(action_entity=EventLabelCommonActionValue.wrong_command, in_module=None)
 @handle_common_exceptions_decorator
 async def help_command(client: Client, update: CallbackQuery | Message) -> str:
     """Handles all unknown commands/messages."""

@@ -1,12 +1,9 @@
-from dataclasses import dataclass, field
-
 from pyrogram.types import (
     Message,
 )
 
 import exceptions
 from helpers.base import BaseHelper, api_adapter_module
-from models import Module
 
 
 class WithHelperDecorator:

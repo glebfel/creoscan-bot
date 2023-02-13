@@ -1,10 +1,11 @@
-import aiohttp
 import datetime
 import json
 import logging
 
+import aiohttp
+
 import settings
-from common.models import ChannelStats, Hashtag, Post
+from common.models import Hashtag, Post
 from exceptions import (
     AccountIsPrivate,
     AccountNotExist,
@@ -16,7 +17,6 @@ from .utils import (
     fix_hashtag_text,
     get_hashtags_from_text,
 )
-
 
 log = logging.getLogger(__name__)
 
@@ -31,12 +31,12 @@ class BaseThirdPartyAPIClient:
     headers = {}
 
     async def request(self, edge: str, url: str,
-                       is_json: bool = True, proxy: str = None, querystring: dict = None) -> list:
+                      is_json: bool = True, proxy: str = None, querystring: dict = None) -> list:
         async with aiohttp.ClientSession(auth=self.auth, headers=self.headers) as session:
             async with session.get(
-                '/'.join((url, edge)),
-                params=querystring,
-                proxy=proxy,
+                    '/'.join((url, edge)),
+                    params=querystring,
+                    proxy=proxy,
             ) as res:
                 return await self._clean_response(res, is_json=is_json)
 
@@ -75,41 +75,6 @@ class HashtagsExtractorMixin:
             return hashtags
         except TypeError as exc:
             raise Exception(f'Failed to convert {raw} to Hashtags: {exc}')
-
-
-class LamadavaClient(BaseThirdPartyAPIClient, HashtagsExtractorMixin):
-    api_provider_name = 'Lamadava'
-    headers = {
-        'accept': 'application/json',
-        'x-access-key': settings.LAMADAVA_KEY,
-    }
-
-    async def get_hashtags_by_word(self, word: str) -> list:
-        res = await self.request(
-            edge='v1/search/hashtags',
-            querystring={'query': word},
-            url=settings.LAMADAVA_URL,
-        )
-        if not isinstance(res, list):
-            raise ThirdPartyApiException('Failed to extract hashtags: %s', res)
-        return await self._make_hashtags(raw=res)
-
-    @staticmethod
-    async def _make_hashtag(raw: dict) -> Hashtag:
-        """
-        [
-            {
-                "id": 17843723539051693,
-                "name": "moscow",
-                "media_count": 58817581,
-                "profile_pic_url": None,
-            },
-        ]
-        """
-        return Hashtag(
-            rate=raw.get('media_count', 0),
-            text=await fix_hashtag_text(raw['name']),
-        )
 
 
 class RapidAPIClient(BaseThirdPartyAPIClient, HashtagsExtractorMixin):
@@ -244,44 +209,4 @@ class RapidAPIClient(BaseThirdPartyAPIClient, HashtagsExtractorMixin):
         return Hashtag(
             rate=raw['hashtag'].get('media_count', 0),
             text=await fix_hashtag_text(raw['hashtag']['name']),
-        )
-
-
-class TgStatClient(BaseThirdPartyAPIClient):
-    api_provider_name = 'TgStat'
-    auth = aiohttp.BasicAuth(
-        settings.SMP_APP_ID,
-        settings.SMP_APP_SECRET,
-    )
-
-    tgstat_to_ChannelStats_mapping = {
-        'публикации': 'publications',
-        'подписчики': 'subscribers',
-        'сегодня': 'subscribers_delta_today',
-        'за месяц': 'subscribers_delta_month',
-        'за неделю': 'subscribers_delta_week',
-        'индекс цитирования': 'citation_index',
-        'средний охват': 'average_single_publication_views',
-        'средний рекламный': 'average_single_publication_ad_views',
-        'за 12 часов': 'average_single_publication_ad_views_12h',
-        'за 24 часа': 'average_single_publication_ad_views_24h',
-        'за 48 часов': 'average_single_publication_ad_views_48h',
-        'ERR': 'average_interest',
-        'ERR24': 'average_interest_daily',
-        'возраст канала': 'channel_age_days',
-        'канал создан': 'channel_created_at',
-    }
-
-    async def get_channel_posts(self, word: str) -> list:
-        return await self.request(
-            edge='get-posts',
-            url=f'{settings.SMP_BASE_URL}/webscrapper/v1',
-            querystring={'channel_name': word},
-        )
-
-    async def get_channel_stats(self, word: str) -> list:
-        return await self.request(
-            edge='get-stats',
-            url=f'{settings.SMP_BASE_URL}/webscrapper/v1',
-            querystring={'channel_name': word},
         )

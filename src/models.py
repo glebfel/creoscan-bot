@@ -1,4 +1,6 @@
 import logging
+import pathlib
+
 import yaml
 from collections import ChainMap
 from dataclasses import dataclass, field, fields
@@ -7,6 +9,9 @@ import settings
 
 
 log = logging.getLogger(__name__)
+
+# root directory
+ROOT_PATH = str(pathlib.Path(__file__).parent.parent) + '\\'
 
 
 def read_external_config(file_path: str):
@@ -17,7 +22,7 @@ def read_external_config(file_path: str):
     return dict(ChainMap(*loaded_docs))
 
 
-loaded_config = read_external_config(settings.CONFIG_PATH)
+loaded_config = read_external_config(ROOT_PATH + settings.CONFIG_PATH)
 
 
 @dataclass

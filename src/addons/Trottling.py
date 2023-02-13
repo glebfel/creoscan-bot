@@ -1,5 +1,5 @@
 import logging
-from dataclasses import dataclass, field, fields
+from dataclasses import dataclass, field
 
 from pyrogram.types import (
     CallbackQuery,
@@ -11,7 +11,6 @@ from db.connector import database_connector
 from helpers.state import redis_connector, StashKeys
 from models import Module
 from utils import check_trottling
-
 
 log = logging.getLogger(__name__)
 

@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 import importlib
 import logging
+from datetime import timedelta, datetime
 from typing import Optional
 
 from pyrogram import Client, filters
@@ -83,8 +84,6 @@ module = IntroductionModule(name='introduction')
 
 @Client.on_message(filters.command('start'))
 @handle_common_exceptions_decorator
-@handle_trottling_decorator
-@SendUserActionEventDecorator(in_module=module.name)
 @inform_user_decorator
 async def callback(client: Client, update: CallbackQuery | Message) -> None:
     # Set new commands for bottom-left (blue) menu

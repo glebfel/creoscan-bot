@@ -14,9 +14,7 @@ from models import Module
 
 from .clients import (
     BaseThirdPartyAPIClient,
-    LamadavaClient,
     RapidAPIClient,
-    TgStatClient,
 )
 
 
@@ -46,8 +44,6 @@ class BaseHelper:
 
     clients = (
         RapidAPIClient,
-        LamadavaClient,
-        TgStatClient,
     )
 
     def __init__(self, message: Message):
