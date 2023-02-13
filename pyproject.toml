@@ -1,0 +1,28 @@
+[tool.poetry]
+name = "datafanbot"
+version = "0.1.0"
+description = ""
+authors = ["Shishkin Alexander <shishkin.alexander@disroot.org>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+Pyrogram = "^2.0.57"
+rich = "^12.6.0"
+django-environ = "^0.9.0"
+aiohttp = "^3.8.3"
+asyncio-redis = "^0.16.0"
+PyYAML = "^6.0"
+aiopg = "^1.4.0"
+SQLAlchemy = "^1.4.43"
+TgCrypto = "^1.2.4"
+APScheduler = "^3.9.1.post1"
+
+
+[tool.poetry.group.dev.dependencies]
+mypy = "^0.990"
+python-language-server = "^0.36.2"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
