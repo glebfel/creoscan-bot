@@ -103,6 +103,7 @@ ANNOUNCE_PACK_LENGTH = 20
 CONFIG_PATH = 'configs/creoscan.yaml'
 PLUGINS = [
     'Introduction.core',
+    'Instagram.core',
     'Support.core',
     'Common.core',
 ]

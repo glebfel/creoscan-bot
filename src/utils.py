@@ -4,28 +4,9 @@ import logging
 import time
 from typing import Any, Callable, Optional
 
-from common.models import UserRoleBit
 from helpers.state import redis_connector, StashKeys
 
-
 log = logging.getLogger(__name__)
-
-
-async def check_permission(role: Optional[int], allowed_role: Optional[UserRoleBit]) -> bool:
-    if allowed_role is None:
-        # assume action is allowed for everyone
-        return True
-
-    if role is None:
-        # assume user has no role, so any restricted actions are forbidden
-        return False
-
-    """
-    User role is a sequence of bits, e.g. 0010.
-    If user has permission for a particular role, corresponding bit is set to 1.
-    Positions of the bits (i.e. roles) defined by `UserRoleBit`.
-    """
-    return role & (1 << allowed_role)
 
 
 async def check_trottling(stash_key: StashKeys, window_size_s: float, user_id: int,
