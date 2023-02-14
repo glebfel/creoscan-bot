@@ -34,9 +34,6 @@ env = environ.FileAwareEnv(
     SMP_BASE_URL=(str, 'https://api.smp.io'),
 
     # ThirdParty API
-    LAMADAVA_KEY=(str, ''),
-    LAMADAVA_URL=(str, 'https://api.lamadava.com'),
-
     RAPIDAPI_URL=(str, 'https://instagram-data1.p.rapidapi.com'),
     RAPIDAPI_EDGE=(str, 'instagram-data1.p.rapidapi.com'),
     RAPIDAPI_KEY=(str, ''),
@@ -103,7 +100,7 @@ DAY_BORDER_HOUR = 14
 
 ANNOUNCE_PACK_LENGTH = 20
 
-CONFIG_PATH = 'configs/datafan.yaml'
+CONFIG_PATH = 'configs/creoscan.yaml'
 PLUGINS = [
     'Introduction.core',
     'Support.core',
