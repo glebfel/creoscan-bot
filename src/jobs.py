@@ -82,14 +82,14 @@ async def get_user_instagram_media(
                 await message.reply_photo(
                     photo=helper_data['image_versions2']['candidates'][0]['url'],
                     reply_to_message_id=message.id,
-                    # reply_markup=module.share_keyboard,
+                    reply_markup=module.keyboard if hasattr(module, 'keyboard') else None,
                     caption=text
                 )
             case 2:
                 await message.reply_video(
                     video=helper_data['video_versions'][0]['url'],
                     reply_to_message_id=message.id,
-                    # reply_markup=module.share_keyboard,
+                    reply_markup=module.keyboard if hasattr(module, 'keyboard') else None,
                     caption=text
                 )
     # finally:
