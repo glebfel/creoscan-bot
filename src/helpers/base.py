@@ -8,7 +8,7 @@ from exceptions import (
     AccountIsPrivate,
     AccountNotExist,
     EmptyResultsException,
-    ThirdPartyApiException, MediaNotFoundError,
+    ThirdPartyApiException
 )
 from models import Module
 
@@ -20,7 +20,6 @@ from .clients import (
 
 @dataclass
 class APIAdapterModule(Module):
-    error_text_media_not_found: str = field(init=False)
     error_text_account_not_found: str = field(init=False)
     error_text_account_private: str = field(init=False)
     error_text_first_provider_failed: str = field(init=False)
@@ -101,7 +100,7 @@ class BaseHelper:
 
             # request with provider was sucessful and not empty
             return result
-        except (AccountIsPrivate, AccountNotExist, MediaNotFoundError):  # these errors are permanent
+        except (AccountIsPrivate, AccountNotExist):  # these errors are permanent
             raise
         except (EmptyResultsException, ThirdPartyApiException) as exc:  # these errors are retriable
             # inform user about delay

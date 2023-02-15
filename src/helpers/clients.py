@@ -41,7 +41,7 @@ class BaseThirdPartyAPIClient:
             response_cleaned = await res.content.read()
 
             if res.status == 404:
-                raise MediaNotFoundError(f'{self.api_provider_name} found nothing')
+                raise AccountNotExist(f'{self.api_provider_name} found nothing')
             if res.status == 500:
                 raise EmptyResultsException(f'{self.api_provider_name} found nothing')
             if res.status == 504:
@@ -57,8 +57,7 @@ class BaseThirdPartyAPIClient:
                 f'{self.api_provider_name} non-JSON response: Res [{res.status}] ({res}): {response_cleaned}')
         else:
             if not response_cleaned:
-                raise EmptyResultsException(
-                    f'Empty {self.api_provider_name} response. Res [{res.status}] ({res}): {response_cleaned}')
+                raise AccountIsPrivate()
             return response_cleaned
 
 
