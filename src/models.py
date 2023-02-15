@@ -50,8 +50,10 @@ class BotModule(Module):
     friendly_name: str = field(init=False)
     icon: str = field(init=False)
     introduction_text: str = field(init=False)
+    pending_text: str = field(init=False)
     header_text: str = field(init=False)
     footer_text: str = field(init=False)
+    result_text: str = field(init=False)
 
     @property
     def button(self):

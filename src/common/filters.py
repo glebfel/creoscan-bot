@@ -1,10 +1,9 @@
 import logging
+
 from pyrogram import filters
-from pyrogram.types import Message
 
 from helpers.state import redis_connector
 from plugins.base import get_modules_buttons, get_modules_commands
-
 
 log = logging.getLogger(__name__)
 

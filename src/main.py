@@ -6,11 +6,10 @@ from rich.logging import RichHandler
 import settings
 
 
-#-------------------
+# -------------------
 
 
 def main() -> None:
-
     # set up logging
     logging.basicConfig(level=settings.LOG_LEVEL,
                         format='%(name)s - %(message)s',

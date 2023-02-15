@@ -1,27 +1,9 @@
-import importlib
 import logging
-from typing import Tuple
 
-from pyrogram import Client
 from pyrogram.enums import ChatAction
 from pyrogram.types import CallbackQuery, Message
 
-import exceptions
-import settings
-from db.connector import database_connector
-from common.models import UserRoleBit
-from helpers.state import redis_connector
-from addons.Telemetry import (
-    send_telemetry,
-    EventLabelUserActionTypeValue,
-    EventLabelResultStatusValue,
-    TelemetryEvent,
-    TelemetryEventName,
-    UserActionEventLabels,
-)
-from utils import check_permission
 from .utils import perform_func_with_error_handling
-
 
 log = logging.getLogger(__name__)
 
@@ -68,36 +50,5 @@ def inform_user_decorator(func):
         # answer query => stop showing animated circle on button
         if isinstance(update, CallbackQuery):
             await update.answer('Готово')
-
-    return wrapper
-
-
-def restricted_method_decorator(func):
-    """
-    Checks user permissions before executing the Handler method
-    """
-    async def wrapper(instance, client: Client, update: CallbackQuery | Message):
-        from common.commands import help_command
-
-        allowed_role: UserRoleBit = instance.allowed_role
-        user_role: int = (await database_connector.get_user(
-            username=update.from_user.username,
-            user_id=update.from_user.id,
-        )).role
-
-        log.debug(
-            'Checking user "%s" role "%s" before accessing module "%s" with restriction "%s"',
-            update.from_user.id,
-            user_role,
-            instance,
-            allowed_role,
-        )
-
-        if not await check_permission(user_role, allowed_role):
-            log.warning('User "%s" has no access rights for module "%s"', update.from_user.id, instance)
-            # treat command as unknown if user is not allowed to use it
-            return await help_command(client, update)
-
-        return await func(instance, client, update)
 
     return wrapper

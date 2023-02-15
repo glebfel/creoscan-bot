@@ -68,7 +68,7 @@ class BaseHelper:
             self._search_method,
             clients := [c for c in self.clients if hasattr(c, self._search_method)],
         )
-        return clients
+        return self.clients
 
     @property
     async def search_results(self) -> List[Any]:
@@ -94,7 +94,7 @@ class BaseHelper:
 
             log.debug('Trying to perform search of "%s" with %s', self.keyword, search_method)
 
-            if not (result := await search_method(self.keyword)):
+            if not (result := await search_method(*self.keyword)):
                 # provider failed, but probably the next one will find something
                 raise EmptyResultsException(f'{client.api_provider_name} found nothing for {self.keyword}')
 

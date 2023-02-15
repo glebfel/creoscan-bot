@@ -36,7 +36,7 @@ module = SupportModule('support')
 
 
 @Client.on_message(filters.regex(rf'^{module.button}$') | filters.command(module.command))
-@handle_common_exceptions_decorator
+# @handle_common_exceptions_decorator
 @inform_user_decorator
 async def callback(client: Client, update: CallbackQuery | Message) -> None:
     await base_callback(client, module, update)
