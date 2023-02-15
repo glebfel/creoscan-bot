@@ -87,7 +87,7 @@ async def get_user_instagram_media(
                 )
             case 2:
                 await message.reply_video(
-                    video=helper_data['video_version'][0]['url'],
+                    video=helper_data['video_versions'][0]['url'],
                     reply_to_message_id=message.id,
                     # reply_markup=module.share_keyboard,
                     caption=text
