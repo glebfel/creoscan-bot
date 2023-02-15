@@ -62,7 +62,6 @@ async def callback(client: Client, update: CallbackQuery | Message) -> None:
     await base_callback(client, module, update)
 
 
-# @Client.on_message(filters.text & conversation_filter(module.name))
 # @handle_common_exceptions_decorator
 @Client.on_message(filters.text)
 @inform_user_decorator

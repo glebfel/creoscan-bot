@@ -13,6 +13,7 @@ def get_helper_class_from_link(text: str) -> BaseHelper:
 
 
 def extract_username_from_link(link: str) -> str:
+    # in reels links - no username
     if '/reel/' in link:
         return link
     if '/stories/' in link:
