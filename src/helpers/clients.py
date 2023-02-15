@@ -9,7 +9,7 @@ from exceptions import (
     AccountNotExist,
     EmptyResultsException,
     ThirdPartyApiException,
-    ThirdPartyTimeoutError, MediaNotFoundError,
+    ThirdPartyTimeoutError
 )
 
 log = logging.getLogger(__name__)
