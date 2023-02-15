@@ -24,3 +24,7 @@ class AccountIsPrivate(ThirdPartyApiException):
 
 class ThirdPartyTimeoutError(ThirdPartyApiException):
     pass
+
+
+class MediaNotFoundError(ThirdPartyApiException):
+    pass

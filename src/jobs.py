@@ -56,6 +56,8 @@ async def get_user_instagram_media(
     try:
         result_status = EventLabelResultStatusValue.success
         helper_data = await helper_class(message).search_results
+    except exceptions.MediaNotFoundError:
+        await message.reply(text=api_adapter_module.error_text_media_not_found, reply_to_message_id=message.id)
     except exceptions.AccountIsPrivate:
         result_status = EventLabelResultStatusValue.account_is_private
         await message.reply(text=api_adapter_module.error_text_account_private, reply_to_message_id=message.id)

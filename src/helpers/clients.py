@@ -9,7 +9,7 @@ from exceptions import (
     AccountNotExist,
     EmptyResultsException,
     ThirdPartyApiException,
-    ThirdPartyTimeoutError,
+    ThirdPartyTimeoutError, MediaNotFoundError,
 )
 
 log = logging.getLogger(__name__)
@@ -41,7 +41,7 @@ class BaseThirdPartyAPIClient:
             response_cleaned = await res.content.read()
 
             if res.status == 404:
-                raise AccountNotExist(f'{self.api_provider_name} found nothing')
+                raise MediaNotFoundError(f'{self.api_provider_name} found nothing')
             if res.status == 500:
                 raise EmptyResultsException(f'{self.api_provider_name} found nothing')
             if res.status == 504:
