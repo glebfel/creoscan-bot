@@ -82,7 +82,7 @@ class RapidAPIClient(BaseThirdPartyAPIClient):
             querystring={'post': f"https://www.instagram.com/p/{reel_id}/"},
             url=settings.RAPIDAPI_URL,
         )
-        return res
+        return [res]
 
     async def get_selected_story(self, username: str, story_id: str) -> list:
         res = await self.request(
@@ -94,6 +94,6 @@ class RapidAPIClient(BaseThirdPartyAPIClient):
         # iterate over stories list to find story by id
         for story in res:
             if story['pk'] == story_id:
-                return story
+                return [story]
 
         return []
