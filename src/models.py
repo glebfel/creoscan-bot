@@ -10,7 +10,7 @@ log = logging.getLogger(__name__)
 
 
 def read_external_config(file_path: str):
-    with open(file_path, 'r') as file:
+    with open(file_path, 'r', encoding='utf-8') as file:
         loaded_docs = [doc for doc in yaml.safe_load_all(file) if doc]
 
     # combine list of dicts into one dict
