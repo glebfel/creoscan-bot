@@ -16,7 +16,6 @@ from addons.Telemetry import (
 )
 from db.connector import database_connector
 from helpers.base import api_adapter_module, BaseHelper
-from helpers.utils import extract_username_from_link
 from models import BotModule
 
 log = logging.getLogger(__name__)
@@ -73,10 +72,6 @@ async def get_user_instagram_media(
         result_status = EventLabelResultStatusValue.wrong_input
         await message.reply(text=api_adapter_module.wrong_input_text, reply_to_message_id=message.id)
     else:
-        text = module.result_text.format(
-            account=extract_username_from_link(message.text),
-        ).strip()
-
         for ind, story in enumerate(helper_data):
             match story['media_type']:
                 case 1:
@@ -84,16 +79,15 @@ async def get_user_instagram_media(
                         photo=story['image_versions2']['candidates'][0]['url'],
                         reply_to_message_id=message.id if ind == (len(helper_data) - 1) else None,
                         reply_markup=module.keyboard if hasattr(module, 'keyboard') else None,
-                        caption=text if ind == (len(helper_data) - 1) else None
+                        caption=module.result_text if ind == (len(helper_data) - 1) else None
                     )
                 case 2:
                     await message.reply_video(
                         video=story['video_versions'][0]['url'],
                         reply_to_message_id=message.id if ind == (len(helper_data) - 1) else None,
                         reply_markup=module.keyboard if hasattr(module, 'keyboard') else None,
-                        caption=text if ind == (len(helper_data) - 1) else None
+                        caption=module.result_text if ind == (len(helper_data) - 1) else None
                     )
-
 
     # finally:
     #     labels_kwargs = dict(
