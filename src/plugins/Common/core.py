@@ -10,12 +10,7 @@ from common.decorators import (
     handle_common_exceptions_decorator,
 )
 from helpers.state import redis_connector
-from addons.Telemetry import (
-    EventLabelCommonActionValue,
-    SendUserActionEventDecorator,
-)
 from models import Module
-
 
 common_module = Module('common')
 log = logging.getLogger(__name__)

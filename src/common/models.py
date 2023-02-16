@@ -1,11 +1,9 @@
 import datetime
 import enum
 import logging
-import math
 from dataclasses import dataclass, field
 
 import settings
-
 
 log = logging.getLogger(__name__)
 

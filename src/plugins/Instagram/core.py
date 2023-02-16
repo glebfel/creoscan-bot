@@ -10,7 +10,6 @@ from pyrogram.types import (
 )
 
 import settings
-from addons.Telemetry import SendUserActionEventDecorator
 from addons.Trottling import handle_trottling_decorator
 from common.decorators import (
     inform_user_decorator, handle_common_exceptions_decorator,

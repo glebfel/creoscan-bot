@@ -9,13 +9,11 @@ from pyrogram.types import (
     ReplyKeyboardMarkup,
 )
 
-from addons.Telemetry import SendUserActionEventDecorator
 from addons.Trottling import handle_trottling_decorator
 from common.decorators import (
     handle_common_exceptions_decorator,
     inform_user_decorator,
 )
-from db.connector import database_connector
 from models import BotModule
 from ..base import callback as base_callback
 from ..base import get_modules_buttons
@@ -63,24 +61,5 @@ module = IntroductionModule(name='introduction')
 @handle_trottling_decorator
 @inform_user_decorator
 async def callback(client: Client, update: CallbackQuery | Message) -> None:
-    # save or update the user in DB
-    # userdata = dict(
-    #     user_id=update.from_user.id,
-    #     firstname=update.from_user.first_name,
-    #     lastname=update.from_user.last_name,
-    #     username=update.from_user.username,
-    #     chat_id=update.from_user.id,
-    # )
-    #
-    # user = await database_connector.get_user(
-    #     username=update.from_user.username,
-    #     user_id=update.from_user.id,
-    # )
-    # log.debug('User exists: %s', user)
-    #
-    # log.debug('Saving user: %s', userdata)
-    #
-    # await database_connector.store_or_update_user(**userdata)
-
     await base_callback(client, module, update)
 

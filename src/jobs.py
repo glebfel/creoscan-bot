@@ -1,4 +1,3 @@
-import datetime
 import logging
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -12,8 +11,7 @@ from addons.Telemetry import (
     MeasurementLabelTypeValue,
     TelemetryEventName,
     TelemetryMeasurement,
-    TelemetryMeasurementLabels, ExternalAPIEventLabels, TelemetryEvent, EventLabelResultStatusValue,
-)
+    TelemetryMeasurementLabels, )
 from db.connector import database_connector
 from helpers.base import api_adapter_module, BaseHelper
 from models import BotModule
@@ -53,23 +51,17 @@ async def get_user_instagram_media(
     custom_error_message: str = getattr(module, 'error_text', api_adapter_module.unhandled_error_text)
 
     try:
-        result_status = EventLabelResultStatusValue.success
         helper_data = await helper_class(message).search_results
     except exceptions.AccountIsPrivate:
-        result_status = EventLabelResultStatusValue.account_is_private
         await message.reply(text=api_adapter_module.error_text_account_private, reply_to_message_id=message.id)
     except exceptions.AccountNotExist:
-        result_status = EventLabelResultStatusValue.account_not_exists
         await message.reply(text=api_adapter_module.error_text_account_not_found, reply_to_message_id=message.id)
     except exceptions.EmptyResultsException:
-        result_status = EventLabelResultStatusValue.empty
         await message.reply(text=custom_error_message, reply_to_message_id=message.id)
     except exceptions.ThirdPartyApiException:
-        result_status = EventLabelResultStatusValue.error
         await message.reply(api_adapter_module.unhandled_error_text)
         raise  # unhanled error, let top-level decorator to know about it
     except exceptions.WrongInputException:
-        result_status = EventLabelResultStatusValue.wrong_input
         await message.reply(text=api_adapter_module.wrong_input_text, reply_to_message_id=message.id)
     else:
         for ind, story in enumerate(helper_data):
@@ -88,14 +80,3 @@ async def get_user_instagram_media(
                         reply_markup=module.keyboard if hasattr(module, 'keyboard') else None,
                         caption=module.result_text if ind == (len(helper_data) - 1) else None
                     )
-
-    # finally:
-    #     labels_kwargs = dict(
-    #         provider='TgStat',
-    #         status=result_status,
-    #     )
-    #     await send_telemetry(
-    #         TelemetryEvent(
-    #             event_labels=ExternalAPIEventLabels(**labels_kwargs),
-    #             event_name=TelemetryEventName.tgbot_external_api_event,
-    #         ))
