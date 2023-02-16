@@ -57,7 +57,7 @@ module = IntroductionModule(name='introduction')
 
 
 @Client.on_message(filters.command('start'))
-# @handle_common_exceptions_decorator
+@handle_common_exceptions_decorator
 @inform_user_decorator
 async def callback(client: Client, update: CallbackQuery | Message) -> None:
     # save or update the user in DB

@@ -11,7 +11,7 @@ from pyrogram.types import (
 
 import settings
 from common.decorators import (
-    inform_user_decorator,
+    inform_user_decorator, handle_common_exceptions_decorator,
 )
 from common.filters import conversation_filter
 from helpers.utils import get_helper_class_from_link
@@ -56,14 +56,14 @@ module = InstagramModule('instagram')
 
 
 @Client.on_message(filters.regex(rf'^{module.button}$') | filters.command(module.command))
-# @handle_common_exceptions_decorator
+@handle_common_exceptions_decorator
 @inform_user_decorator
 async def callback(client: Client, update: CallbackQuery | Message) -> None:
     await base_callback(client, module, update)
 
 
-# @handle_common_exceptions_decorator
 @Client.on_message(filters.text & conversation_filter(module.name))
+@handle_common_exceptions_decorator
 @inform_user_decorator
 async def handle_instagram_request(client: Client, message: Message) -> None:
     start_time = datetime.datetime.now()
