@@ -9,6 +9,8 @@ from pyrogram.types import (
     ReplyKeyboardMarkup,
 )
 
+from addons.Telemetry import SendUserActionEventDecorator
+from addons.Trottling import handle_trottling_decorator
 from common.decorators import (
     handle_common_exceptions_decorator,
     inform_user_decorator,
@@ -58,6 +60,7 @@ module = IntroductionModule(name='introduction')
 
 @Client.on_message(filters.command('start'))
 @handle_common_exceptions_decorator
+@handle_trottling_decorator
 @inform_user_decorator
 async def callback(client: Client, update: CallbackQuery | Message) -> None:
     # save or update the user in DB

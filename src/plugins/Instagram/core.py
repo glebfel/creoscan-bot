@@ -10,6 +10,8 @@ from pyrogram.types import (
 )
 
 import settings
+from addons.Telemetry import SendUserActionEventDecorator
+from addons.Trottling import handle_trottling_decorator
 from common.decorators import (
     inform_user_decorator, handle_common_exceptions_decorator,
 )
@@ -56,6 +58,7 @@ module = InstagramModule('instagram')
 
 
 @Client.on_message(filters.regex(rf'^{module.button}$') | filters.command(module.command))
+@handle_trottling_decorator
 @handle_common_exceptions_decorator
 @inform_user_decorator
 async def callback(client: Client, update: CallbackQuery | Message) -> None:
@@ -63,6 +66,7 @@ async def callback(client: Client, update: CallbackQuery | Message) -> None:
 
 
 @Client.on_message(filters.text & conversation_filter(module.name))
+@handle_trottling_decorator
 @handle_common_exceptions_decorator
 @inform_user_decorator
 async def handle_instagram_request(client: Client, message: Message) -> None:
