@@ -20,7 +20,7 @@ services:
       - BOT_NAME
       - BOT_TOKEN
       - BOT_VERSION
-      - DB_PASSWORD
+      - REDIS_PORT
       - SUPPORT_CHAT_URL
       - RAPIDAPI_KEY
       # optional ENVs

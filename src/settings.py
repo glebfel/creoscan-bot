@@ -14,24 +14,8 @@ env = environ.FileAwareEnv(
     LOG_LEVEL=(str, 'WARNING'),
 
     # DB
-    DB_NAME=(str, 'postgres'),
-    DB_USER=(str, 'postgres'),
-    DB_PASSWORD=(str),
-    DB_HOST=(str, 'db'),
-    DB_PORT=(int, 5432),
     REDIS_HOST=(str, 'redis'),
     REDIS_PORT=(int, 6379),
-
-    SEND_PLATFORM_METRICS_DATA=(bool, True),
-    SEND_USER_STATS_INTERVAL_S=(int, 1800),
-
-    # SMP
-    SMP_PLATFORM_METRICS_EVENTS_URL=(str, 'platform-metrics/v1/events/'),
-    SMP_PLATFORM_METRICS_MEASUREMENTS_URL=(str, 'platform-metrics/v1/measurements/'),
-
-    SMP_APP_ID=(str),
-    SMP_APP_SECRET=(str),
-    SMP_BASE_URL=(str, 'https://api.smp.io'),
 
     # ThirdParty API
     RAPIDAPI_URL=(str, 'https://instagram-data1.p.rapidapi.com'),
@@ -60,11 +44,6 @@ BOT_TOKEN = env('BOT_TOKEN')
 BOT_VERSION = env('BOT_VERSION')
 
 # DB
-DB_NAME = env('DB_NAME')
-DB_USER = env('DB_USER')
-DB_PASSWORD = env('DB_PASSWORD')
-DB_HOST = env('DB_HOST')
-DB_PORT = env('DB_PORT')
 
 REDIS_HOST = env('REDIS_HOST')
 REDIS_PORT = env('REDIS_PORT')
@@ -81,9 +60,6 @@ RAPIDAPI_KEY = env('RAPIDAPI_KEY')
 
 DISCORD_WEBHOOK = env('DISCORD_WEBHOOK')
 SUPPORT_CHAT_URL = env('SUPPORT_CHAT_URL')
-
-SEND_PLATFORM_METRICS_DATA = env('SEND_PLATFORM_METRICS_DATA')
-SEND_USER_STATS_INTERVAL_S = env('SEND_USER_STATS_INTERVAL_S')
 
 TELEGRAM_MAX_INLINE_BUTTON_ROWS = 30
 TELEGRAM_FLOOD_CONTROL_PAUSE_S = env('TELEGRAM_FLOOD_CONTROL_PAUSE_S')
