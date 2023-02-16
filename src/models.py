@@ -1,28 +1,23 @@
 import logging
-import pathlib
-
-import yaml
 from collections import ChainMap
 from dataclasses import dataclass, field, fields
 
-import settings
+import yaml
 
+import settings
 
 log = logging.getLogger(__name__)
 
-# root directory
-ROOT_PATH = str(pathlib.Path(__file__).parent.parent) + '\\'
-
 
 def read_external_config(file_path: str):
-    with open(file_path, 'r', encoding='utf-8') as file:
+    with open(file_path, 'r') as file:
         loaded_docs = [doc for doc in yaml.safe_load_all(file) if doc]
 
     # combine list of dicts into one dict
     return dict(ChainMap(*loaded_docs))
 
 
-loaded_config = read_external_config(ROOT_PATH + settings.CONFIG_PATH)
+loaded_config = read_external_config(settings.CONFIG_PATH)
 
 
 @dataclass
