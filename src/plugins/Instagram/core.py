@@ -63,7 +63,7 @@ async def callback(client: Client, update: CallbackQuery | Message) -> None:
 
 
 # @handle_common_exceptions_decorator
-@Client.on_message(filters.text)
+@Client.on_message(filters.text & conversation_filter(module.name))
 @inform_user_decorator
 async def handle_instagram_request(client: Client, message: Message) -> None:
     start_time = datetime.datetime.now()
