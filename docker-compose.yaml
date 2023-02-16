@@ -1,36 +1,6 @@
 version: '3.8'
 
 services:
-  db:
-    image: postgres:latest
-    restart: unless-stopped
-    ports: 
-      - ${DB_PORT}:5432
-    environment:
-      - POSTGRES_PASSWORD=${DB_PASSWORD}
-    volumes:
-      - ./.data/postgres:/var/lib/postgresql/data
-
-  db-init:
-    image: postgres
-    command: psql -h db -U postgres -f /init.sql
-    volumes:
-      - ./init.sql:/init.sql:ro
-    links:
-      - db
-    environment:
-      - PGPASSWORD=${DB_PASSWORD}
-
-#  db-migrate:
-#    image: postgres
-#    command: find /migrations -name '*.sql' -exec psql -h db -U postgres -f {} \;
-#    volumes:
-#      - ./migrations:/migrations:ro
-#    links:
-#      - db
-#    environment:
-#      - PGPASSWORD=${DB_PASSWORD}
-
   redis:
     image: redis:3.2
     restart: unless-stopped
@@ -50,20 +20,13 @@ services:
       - BOT_NAME
       - BOT_TOKEN
       - BOT_VERSION
-      - BOT_PAYMENT_TOKEN
       - DB_PASSWORD
-      - SMP_APP_ID
-      - SMP_APP_SECRET
-      - SMP_BASE_URL
-      - DISCORD_WEBHOOK
       - SUPPORT_CHAT_URL
       - RAPIDAPI_KEY
-      - LAMADAVA_KEY
       # optional ENVs
       - TELEGRAM_FLOOD_CONTROL_PAUSE_S
       - TROTTLING_WAIT_BETWEEN_PAID_REQUESTS_S
       - TROTTLING_WAIT_BETWEEN_REQUESTS_S
       # debug ENVs
       - LOG_LEVEL
-      - SEND_PLATFORM_METRICS_DATA
     tty: true
