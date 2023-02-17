@@ -34,9 +34,12 @@ env = environ.FileAwareEnv(
     SMP_BASE_URL=(str, 'https://api.smp.io'),
 
     # ThirdParty API
-    RAPIDAPI_URL=(str, 'https://instagram-data1.p.rapidapi.com'),
-    RAPIDAPI_EDGE=(str, 'instagram-data1.p.rapidapi.com'),
-    RAPIDAPI_KEY=(str, ''),
+    INSTAGRAM_RAPIDAPI_URL=(str, 'https://instagram-data1.p.rapidapi.com'),
+    INSTAGRAM_RAPIDAPI_EDGE=(str, 'instagram-data1.p.rapidapi.com'),
+    INSTAGRAM_RAPIDAPI_KEY=(str, ''),
+    TIKTOK_RAPIDAPI_URL=(str, 'https://tiktok-video-no-watermark2.p.rapidapi.com'),
+    TIKTOK_RAPIDAPI_EDGE=(str, 'tiktok-video-no-watermark2.p.rapidapi.com'),
+    TIKTOK_RAPIDAPI_KEY=(str, ''),
 
     DISCORD_WEBHOOK=(str, ''),
     SUPPORT_CHAT_URL=(str),
@@ -83,9 +86,13 @@ else:
     LOG_LEVEL = logging.INFO
 
 # ThirdParty API
-RAPIDAPI_URL = env('RAPIDAPI_URL')
-RAPIDAPI_EDGE = env('RAPIDAPI_EDGE')
-RAPIDAPI_KEY = env('RAPIDAPI_KEY')
+INSTAGRAM_RAPIDAPI_URL = env('INSTAGRAM_RAPIDAPI_URL')
+INSTAGRAM_RAPIDAPI_EDGE = env('INSTAGRAM_RAPIDAPI_EDGE')
+INSTAGRAM_RAPIDAPI_KEY = env('INSTAGRAM_RAPIDAPI_KEY')
+TIKTOK_RAPIDAPI_URL = env('TIKTOK_RAPIDAPI_URL')
+TIKTOK_RAPIDAPI_EDGE = env('TIKTOK_RAPIDAPI_EDGE')
+TIKTOK_RAPIDAPI_KEY = env('TIKTOK_RAPIDAPI_KEY')
+
 
 DISCORD_WEBHOOK = env('DISCORD_WEBHOOK')
 SUPPORT_CHAT_URL = env('SUPPORT_CHAT_URL')
@@ -109,6 +116,7 @@ CONFIG_PATH = 'configs/creoscan.yaml'
 PLUGINS = [
     'Introduction.core',
     'Instagram.core',
+    'TikTok.core',
     'Support.core',
     'Common.core',
 ]

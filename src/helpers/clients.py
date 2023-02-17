@@ -61,18 +61,18 @@ class BaseThirdPartyAPIClient:
             return response_cleaned
 
 
-class RapidAPIClient(BaseThirdPartyAPIClient):
+class InstagramRapidAPIClient(BaseThirdPartyAPIClient):
     api_provider_name = 'Rapid API'
     headers = {
-        'x-rapidapi-host': settings.RAPIDAPI_EDGE,
-        'x-rapidapi-key': settings.RAPIDAPI_KEY,
+        'x-rapidapi-host': settings.INSTAGRAM_RAPIDAPI_EDGE,
+        'x-rapidapi-key': settings.INSTAGRAM_RAPIDAPI_KEY,
     }
 
     async def get_user_stories(self, username: str) -> list:
         res = await self.request(
             edge='user/stories',
             querystring={'username': username},
-            url=settings.RAPIDAPI_URL,
+            url=settings.INSTAGRAM_RAPIDAPI_URL,
         )
         return res
 
@@ -80,7 +80,7 @@ class RapidAPIClient(BaseThirdPartyAPIClient):
         res = await self.request(
             edge='post/info',
             querystring={'post': f"https://www.instagram.com/p/{reel_id}/"},
-            url=settings.RAPIDAPI_URL,
+            url=settings.INSTAGRAM_RAPIDAPI_URL,
         )
         return [res]
 
@@ -88,7 +88,7 @@ class RapidAPIClient(BaseThirdPartyAPIClient):
         res = await self.request(
             edge='user/stories',
             querystring={'username': username},
-            url=settings.RAPIDAPI_URL,
+            url=settings.INSTAGRAM_RAPIDAPI_URL,
         )
 
         # iterate over stories list to find story by id
@@ -97,3 +97,27 @@ class RapidAPIClient(BaseThirdPartyAPIClient):
                 return [story]
 
         return []
+
+
+class TikTokRapidAPIClient(BaseThirdPartyAPIClient):
+    api_provider_name = 'Rapid API'
+    headers = {
+        'x-rapidapi-host': settings.TIKTOK_RAPIDAPI_EDGE,
+        'x-rapidapi-key': settings.TIKTOK_RAPIDAPI_KEY,
+    }
+
+    async def get_selected_video(self, url: str) -> list:
+        res = await self.request(
+            edge='',
+            querystring={"url": url},
+            url=settings.TIKTOK_RAPIDAPI_URL,
+        )
+        return res['data']
+
+    async def get_selected_music(self, url: str) -> list:
+        res = await self.request(
+            edge='music/info',
+            querystring={"url": url},
+            url=settings.TIKTOK_RAPIDAPI_URL,
+        )
+        return res['data']

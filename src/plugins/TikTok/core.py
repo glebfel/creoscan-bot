@@ -15,14 +15,14 @@ from common.decorators import (
     inform_user_decorator, handle_common_exceptions_decorator,
 )
 from common.filters import conversation_filter
-from helpers.utils import get_helper_class_from_link_instagram
-from jobs import scheduler, get_user_instagram_media
+from helpers.utils import get_helper_class_from_link_tiktok
+from jobs import scheduler, get_tiktok_media
 from models import BotModule
 from plugins.base import callback as base_callback, get_modules_buttons
 
 
 @dataclass
-class InstagramModule(BotModule):
+class TikTokModule(BotModule):
     @property
     def keyboard(self) -> InlineKeyboardMarkup:
         buttons = get_modules_buttons()
@@ -53,7 +53,7 @@ class InstagramModule(BotModule):
         )
 
 
-module = InstagramModule('instagram')
+module = TikTokModule('tiktok')
 
 
 @Client.on_message(filters.regex(rf'^{module.button}$') | filters.command(module.command))
@@ -68,11 +68,11 @@ async def callback(client: Client, update: CallbackQuery | Message) -> None:
 @handle_trottling_decorator
 @handle_common_exceptions_decorator
 @inform_user_decorator
-async def handle_instagram_request(client: Client, message: Message) -> None:
+async def handle_tiktok_request(client: Client, message: Message) -> None:
     start_time = datetime.datetime.now()
 
     if current_jobs := scheduler.get_jobs():
-        channel_stats_jobs = list(filter(lambda j: j.id.startswith('instagram-media'), current_jobs))
+        channel_stats_jobs = list(filter(lambda j: j.id.startswith('tiktok-media'), current_jobs))
         if channel_stats_jobs:
             last_job = channel_stats_jobs[-1]
             start_time = last_job.next_run_time
@@ -80,17 +80,17 @@ async def handle_instagram_request(client: Client, message: Message) -> None:
     start_time += datetime.timedelta(seconds=settings.PENDING_DELAY)
 
     scheduler.add_job(
-        get_user_instagram_media,
-        id=f'instagram-media-{message.id}',
+        get_tiktok_media,
+        id=f'tiktok-media-{message.id}',
         trigger='date',
-        name=f'Instagram media for {message.text}',
+        name=f'TikTok media for {message.text}',
         max_instances=5,  # settings.ANNOUNCE_WORKERS,
         misfire_grace_time=None,  # run job even if it's time is overdue
         kwargs={
             'client': client,
             'module': module,
             'message': message,
-            'helper_class': get_helper_class_from_link_instagram(message.text),
+            'helper_class': get_helper_class_from_link_tiktok(message.text),
         },
         run_date=start_time,
     )

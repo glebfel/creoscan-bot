@@ -80,3 +80,41 @@ async def get_user_instagram_media(
                         reply_markup=module.keyboard if hasattr(module, 'keyboard') else None,
                         caption=module.result_text if ind == (len(helper_data) - 1) else None
                     )
+
+
+async def get_tiktok_media(
+        client: Client,
+        helper_class: BaseHelper,
+        message: Message,
+        module: BotModule,
+) -> None:
+    custom_error_message: str = getattr(module, 'error_text', api_adapter_module.unhandled_error_text)
+
+    try:
+        helper_data = await helper_class(message).search_results
+    except exceptions.AccountIsPrivate:
+        await message.reply(text=api_adapter_module.error_text_account_private, reply_to_message_id=message.id)
+    except exceptions.AccountNotExist:
+        await message.reply(text=api_adapter_module.error_text_account_not_found, reply_to_message_id=message.id)
+    except exceptions.EmptyResultsException:
+        await message.reply(text=custom_error_message, reply_to_message_id=message.id)
+    except exceptions.ThirdPartyApiException:
+        await message.reply(api_adapter_module.unhandled_error_text)
+        raise  # unhanled error, let top-level decorator to know about it
+    except exceptions.WrongInputException:
+        await message.reply(text=api_adapter_module.wrong_input_text, reply_to_message_id=message.id)
+    else:
+        if len(helper_data) > 10:
+            await message.reply_video(
+                video=helper_data['play'],
+                reply_to_message_id=message.id,
+                reply_markup=module.keyboard,
+                caption=module.result_text
+            )
+        else:
+            await message.reply_audio(
+                audio=helper_data['play'],
+                reply_to_message_id=message.id,
+                reply_markup=module.keyboard,
+                caption=module.result_text
+            )
