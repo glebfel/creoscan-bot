@@ -75,3 +75,18 @@ class AnnounceJobStats:
         return datetime.datetime.now() + datetime.timedelta(
             seconds=((self.total - self.sent) // self.rate if self.rate else 0)
         )
+
+
+class UserRoleBit(enum.IntEnum):
+    """
+    Defines available roles for the Bot users.
+    Unix-like bit model is used:
+    - 001 - admin
+    - 010 - content creator
+    - 100 - spectator
+    ...
+    """
+    admin = 0  # can assign other roles
+    manager = 1  # can perform announces
+    content_creator = 2  # can add/delete smm cards
+    spectator = 3  # can get statistics

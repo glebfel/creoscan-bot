@@ -8,7 +8,7 @@ from exceptions import (
     AccountIsPrivate,
     AccountNotExist,
     EmptyResultsException,
-    ThirdPartyApiException
+    ThirdPartyApiException,
 )
 from models import Module
 
@@ -68,7 +68,7 @@ class BaseHelper:
             self._search_method,
             clients := [c for c in self.clients if hasattr(c, self._search_method)],
         )
-        return self.clients
+        return clients
 
     @property
     async def search_results(self) -> List[Any]:
