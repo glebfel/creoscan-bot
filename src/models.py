@@ -9,9 +9,6 @@ import settings
 
 log = logging.getLogger(__name__)
 
-# root directory
-ROOT_PATH = str(pathlib.Path(__file__).parent.parent) + '\\'
-
 
 def read_external_config(file_path: str):
     with open(file_path, 'r', encoding='utf-8') as file:
@@ -21,7 +18,7 @@ def read_external_config(file_path: str):
     return dict(ChainMap(*loaded_docs))
 
 
-loaded_config = read_external_config(ROOT_PATH + settings.CONFIG_PATH)
+loaded_config = read_external_config(settings.CONFIG_PATH)
 
 
 @dataclass
