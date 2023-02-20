@@ -51,7 +51,10 @@ class BaseThirdPartyAPIClient:
                     f'{self.api_provider_name} non-200 response. Res [{res.status}] ({res}): {response_cleaned}')
             if is_json:
                 response_cleaned: dict = json.loads(response_cleaned)
-                log.debug('Json response: %s', response_cleaned)
+                # log
+                if response_cleaned:
+                    log.debug('Json response: %s', response_cleaned.keys()
+                        if isinstance(response_cleaned, dict) else response_cleaned[0].keys())
         except (json.decoder.JSONDecodeError, aiohttp.client_exceptions.ContentTypeError):
             raise ThirdPartyApiException(
                 f'{self.api_provider_name} non-JSON response: Res [{res.status}] ({res}): {response_cleaned}')
@@ -85,15 +88,10 @@ class RapidAPIClient(BaseThirdPartyAPIClient):
         return [res]
 
     async def get_selected_story(self, username: str, story_id: str) -> list:
-        res = await self.request(
-            edge='user/stories',
-            querystring={'username': username},
-            url=settings.RAPIDAPI_URL,
-        )
-
         # iterate over stories list to find story by id
-        for story in res:
+        for story in await self.get_user_stories(username):
             if story['pk'] == story_id:
                 return [story]
+            log.debug(f'pk: {story["pk"]}, story_id:{story_id}')
 
         return []
