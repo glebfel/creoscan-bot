@@ -72,7 +72,7 @@ async def get_user_instagram_media(
                 case 1:
                     media_content.append(InputMediaPhoto(media=media['image_versions2']['candidates'][0]['url']))
                 case 2:
-                    media_content.append(InputMediaPhoto(media=media['video_versions'][0]['url']))
+                    media_content.append(InputMediaVideo(media=media['video_versions'][0]['url']))
 
         # split to n-sized chunks
         for media_groups in chunks(media_content, 10):
