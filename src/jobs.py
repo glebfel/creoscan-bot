@@ -1,7 +1,7 @@
 import logging
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from pyrogram import Client
+from pyrogram import Client, errors
 from pyrogram.types import Message, InputMediaPhoto, InputMediaVideo
 
 import exceptions
@@ -81,7 +81,7 @@ async def get_user_instagram_media(
 
             # reply with result text
             await message.reply_text(text=module.result_text)
-        except Exception:
+        except errors.exceptions.bad_request_400.MediaEmpty:
             # if media contain unsupported video type for reply_media_group method
             for ind, media in enumerate(helper_data):
                 match media['media_type']:
