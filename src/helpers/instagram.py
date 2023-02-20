@@ -44,7 +44,7 @@ class InstagramSelectedUserStoryParserHelper(BaseHelper):
 
         # extract username and story id
         text = text.strip().strip('/')
-        story_id = text.split('/')[-1]
+        story_id = text.split('/')[-1].split('?')[0]
         username = text.split('/')[-2]
 
         return username, story_id
