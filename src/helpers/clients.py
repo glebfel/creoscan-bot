@@ -93,5 +93,4 @@ class RapidAPIClient(BaseThirdPartyAPIClient):
             log.debug(f'pk: {story["pk"]}, story_id:{story_id}')
             if story['pk'] == story_id:
                 return [story]
-
         return []
