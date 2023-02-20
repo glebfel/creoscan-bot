@@ -1,0 +1,61 @@
+#!/bin/sh
+#
+# Git hook for deployment.
+#     when bare repo receives update, it performs some checking,
+#     updates worktree for update's branch and restarts corresponding bot 
+
+set -e 
+
+
+# bot bare repo supposed to be named as tg-bot-<NAME>.git
+BARE_REPO_PATH="$(pwd)"
+REPO_NAME=${BARE_REPO_PATH##*/}  # /some/path/tg-bot-<NAME>.git -> tg-bot-<NAME>.git
+BOT=${REPO_NAME%%.git}  # -> tg-bot-<NAME>
+
+while read local_ref local_sha remote_ref remote_sha
+do
+    # cut branch name from 'refs/heads/<branch>'
+    BRANCH=${remote_ref##*/}
+    printf "\e[0;36mTriggered \e[0;32m$BRANCH\e[0m\n"
+done
+
+
+WORKTREE=/opt/${BOT}/  # e.g. /opt/tg-bot-<NAME>
+
+[ -d "$WORKTREE" ] || mkdir -p $WORKTREE
+cd $WORKTREE
+
+printf "\e[0;36mChecking out \e[0;32m${WORKTREE}\e[0m to: \e[0;32m${BRANCH}...\n" && GIT_DIR="$BARE_REPO_PATH" GIT_WORK_TREE="$WORKTREE" git checkout -f $BRANCH
+printf "\e[0;36mUpdating submodules...\e[0m\n" && GIT_DIR="$BARE_REPO_PATH" GIT_WORK_TREE="$WORKTREE" git submodule update --init
+
+
+printf "\e[0;37mChecking tools...\e[0m\n"
+command -v docker >/dev/null || (printf "\e[0;31mdocker is not installed\e[0m\n"; exit 1)
+command -v docker-compose >/dev/null || (printf "\e[0;31mdocker-compose is not installed\e[0m\n"; exit 1)
+
+BOT_IMG="${BOT}:${BRANCH}"  # e.g. tg-bot-<NAME>:production
+printf "\e[0;36mBuilding \e[0;32m$BOT_IMG\e[0m...\n"
+docker build -t $BOT_IMG .
+
+
+printf "\e[0;36mUpdating env file...\e[0m\n"
+[ -f ".env" ] || touch .env && printf "\e[0;33m.env file is empty\e[0m\n"
+sed -i "s/BOT_NAME=.*/BOT_NAME=$BOT/" .env
+sed -i "s/BOT_VERSION=.*/BOT_VERSION=$BRANCH/" .env
+
+
+#while read -r line
+#do
+#   grep -q "^${line%%=*}" .env || (printf "\e[0;31m$line\e[0m - param not defined in .env\n"; exit 1)
+#done <<< $(sed 's/^#.*//' env.example | sed '/^[[:space:]]*$/d')
+
+
+printf "\e[0;33mRestarting services...\e[0m\n"
+docker-compose up -d --force-recreate --remove-orphans
+
+
+printf "\e[0;36mUpdating hook...\e[0m\n"
+[ -f git-hook-post-receive ] && cp -f git-hook-post-receive "$BARE_REPO_PATH/hooks/post-receive" && chmod +x "$BARE_REPO_PATH/hooks/post-receive"
+
+
+printf "\e[0;34m===== D O N E =====\e[0m\n"
