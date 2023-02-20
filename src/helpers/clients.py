@@ -90,8 +90,8 @@ class RapidAPIClient(BaseThirdPartyAPIClient):
     async def get_selected_story(self, username: str, story_id: str) -> list:
         # iterate over stories list to find story by id
         for story in await self.get_user_stories(username):
+            log.debug(f'pk: {story["pk"]}, story_id:{story_id}')
             if story['pk'] == story_id:
                 return [story]
-            log.debug(f'pk: {story["pk"]}, story_id:{story_id}')
 
         return []
