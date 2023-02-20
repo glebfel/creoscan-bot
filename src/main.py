@@ -1,9 +1,11 @@
+import datetime
 import logging
 
 from pyrogram import Client
 from rich.logging import RichHandler
 
 import settings
+from jobs import scheduler, send_user_stats
 
 
 # -------------------
@@ -30,6 +32,17 @@ def main() -> None:
         api_hash=settings.API_HASH,
         bot_token=settings.BOT_TOKEN,
         plugins=plugins,
+    )
+
+    # send stats
+    start_time: datetime.datetime = datetime.datetime.now() + datetime.timedelta(seconds=30)
+    scheduler.add_job(
+        send_user_stats,
+        id='user_stats_telemetry',
+        trigger='interval',
+        next_run_time=start_time,
+        name='User stats telemetry',
+        seconds=settings.SEND_USER_STATS_INTERVAL_S,  # trigger argument
     )
 
     # starting the bot
