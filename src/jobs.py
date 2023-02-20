@@ -2,7 +2,7 @@ import logging
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from pyrogram import Client
-from pyrogram.types import Message
+from pyrogram.types import Message, InputMediaPhoto, InputMediaVideo
 
 import exceptions
 import settings
@@ -15,6 +15,7 @@ from addons.Telemetry import (
 from db.connector import database_connector
 from helpers.base import api_adapter_module, BaseHelper
 from models import BotModule
+from utils import chunks
 
 log = logging.getLogger(__name__)
 scheduler = AsyncIOScheduler()
@@ -64,19 +65,19 @@ async def get_user_instagram_media(
     except exceptions.WrongInputException:
         await message.reply(text=api_adapter_module.wrong_input_text, reply_to_message_id=message.id)
     else:
-        for ind, story in enumerate(helper_data):
-            match story['media_type']:
+        # collect all media links
+        media_content = []
+        for media in helper_data:
+            match media['media_type']:
                 case 1:
-                    await message.reply_photo(
-                        photo=story['image_versions2']['candidates'][0]['url'],
-                        reply_to_message_id=message.id if ind == (len(helper_data) - 1) else None,
-                        reply_markup=module.keyboard if hasattr(module, 'keyboard') else None,
-                        caption=module.result_text if ind == (len(helper_data) - 1) else None
-                    )
+                    media_content.append(InputMediaPhoto(media=media['image_versions2']['candidates'][0]['url']))
                 case 2:
-                    await message.reply_video(
-                        video=story['video_versions'][0]['url'],
-                        reply_to_message_id=message.id if ind == (len(helper_data) - 1) else None,
-                        reply_markup=module.keyboard if hasattr(module, 'keyboard') else None,
-                        caption=module.result_text if ind == (len(helper_data) - 1) else None
-                    )
+                    media_content.append(InputMediaPhoto(media=media['video_versions'][0]['url']))
+
+        # split to n-sized chunks
+        for media_groups in chunks(media_content, 10):
+            await message.reply_media_group(media=media_groups)
+
+        await message.reply_text(text=module.result_text)
+
+

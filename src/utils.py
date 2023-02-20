@@ -100,3 +100,9 @@ def validate_type(obj: Any, required_type: type) -> Any:
             expected = required_type.__name__
         raise TypeError(f'Expected {expected}, got {type(obj).__name__}')
     return obj
+
+
+def chunks(lst, n):
+    """Yield successive n-sized chunks from lst."""
+    for i in range(0, len(lst), n):
+        yield lst[i:i + n]
