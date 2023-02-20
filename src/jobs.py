@@ -1,7 +1,7 @@
 import logging
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from pyrogram import Client
+from pyrogram import Client, errors
 from pyrogram.types import Message, InputMediaPhoto, InputMediaVideo
 
 import exceptions
@@ -74,10 +74,30 @@ async def get_user_instagram_media(
                 case 2:
                     media_content.append(InputMediaVideo(media=media['video_versions'][0]['url']))
 
-        # split to n-sized chunks
-        for media_groups in chunks(media_content, 10):
-            await message.reply_media_group(media=media_groups)
+        try:
+            # split to n-sized chunks
+            for media_groups in chunks(media_content, 10):
+                await message.reply_media_group(media=media_groups)
 
-        await message.reply_text(text=module.result_text)
+            # reply with result text
+            await message.reply_text(text=module.result_text)
+        except errors.exceptions.bad_request_400.MediaEmpty:
+            # if media contain unsupported video type for reply_media_group method
+            for ind, media in enumerate(helper_data):
+                match media['media_type']:
+                    case 1:
+                        await message.reply_photo(
+                            photo=media['image_versions2']['candidates'][0]['url'],
+                            reply_to_message_id=message.id if ind == (len(helper_data) - 1) else None,
+                            reply_markup=module.keyboard if hasattr(module, 'keyboard') else None,
+                            caption=module.result_text if ind == (len(helper_data) - 1) else None
+                        )
+                    case 2:
+                        await message.reply_video(
+                            video=media['video_versions'][0]['url'],
+                            reply_to_message_id=message.id if ind == (len(helper_data) - 1) else None,
+                            reply_markup=module.keyboard if hasattr(module, 'keyboard') else None,
+                            caption=module.result_text if ind == (len(helper_data) - 1) else None
+                        )
 
 
