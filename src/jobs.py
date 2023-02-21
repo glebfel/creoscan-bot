@@ -100,8 +100,6 @@ async def get_user_instagram_media(
                         )
 
 
-
-
 async def get_tiktok_media(
         client: Client,
         helper_class: BaseHelper,
