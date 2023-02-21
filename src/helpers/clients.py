@@ -96,7 +96,6 @@ class InstagramRapidAPIClient(BaseThirdPartyAPIClient):
         return []
 
 
-
 class TikTokRapidAPIClient(BaseThirdPartyAPIClient):
     api_provider_name = 'Rapid API'
     headers = {

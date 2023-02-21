@@ -16,7 +16,7 @@ def get_helper_class_from_link_instagram(text: str) -> BaseHelper:
 def get_helper_class_from_link_tiktok(text: str) -> BaseHelper:
     if '/video/' in text:
         return TikTokSelectedVideoParserHelper
-    elif '/music/' in text:
+    else:
         return TikTokSelectedMusicParserHelper
 
 
