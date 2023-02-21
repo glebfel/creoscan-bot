@@ -14,5 +14,5 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at          TIMESTAMP,
     utm                 TEXT[],
     utm_created_at      TIMESTAMP,
-    UNIQUE(user_id, username)
+    UNIQUE(user_id)
 );

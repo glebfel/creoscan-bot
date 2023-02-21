@@ -21,7 +21,7 @@ class InstagramUserStoriesParserHelper(BaseHelper):
             raise WrongInputException(self._message.text or self._message.media)
 
         # extract username
-        username = text.strip().strip('/').split('/')[-1].replace('@', '')
+        username = text.split('?')[0].strip('/').split('/')[-1].replace('@', '')
 
         # return list because of unpacking args process
         return [username]
@@ -43,9 +43,8 @@ class InstagramSelectedUserStoryParserHelper(BaseHelper):
             raise WrongInputException(self._message.text or self._message.media)
 
         # extract username and story id
-        text = text.strip().strip('/')
-        story_id = text.split('/')[-1]
-        username = text.split('/')[-2]
+        story_id = text.split('?')[0].strip('/').split('/')[-1]
+        username = text.split('?')[0].strip('/').split('/')[-2]
 
         return username, story_id
 
@@ -66,8 +65,7 @@ class InstagramSelectedReelParserHelper(BaseHelper):
             raise WrongInputException(self._message.text or self._message.media)
 
         # extract reel id
-        text = text.strip().strip('/')
-        reel_id = text.split('/')[-1]
+        reel_id = text.split('?')[0].strip('/').split('/')[-1]
 
         # return list because of unpacking args process
         return [reel_id]
