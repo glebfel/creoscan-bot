@@ -78,7 +78,6 @@ async def get_user_instagram_media(
             # split to n-sized chunks
             for media_groups in chunks(media_content, 10):
                 await message.reply_media_group(media=media_groups)
-
             # reply with result text
             await message.reply_text(text=module.result_text)
         except errors.exceptions.bad_request_400.MediaEmpty:
