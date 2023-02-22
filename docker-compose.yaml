@@ -44,7 +44,6 @@ services:
       - SMP_APP_ID
       - SMP_APP_SECRET
       - SMP_BASE_URL
-      - REDIS_PORT
       - SUPPORT_CHAT_URL
       - RAPIDAPI_KEY
       # optional ENVs
