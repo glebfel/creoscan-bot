@@ -3,6 +3,7 @@ import logging
 
 import aiohttp
 
+import exceptions
 import settings
 from exceptions import (
     AccountIsPrivate,
@@ -54,7 +55,7 @@ class BaseThirdPartyAPIClient:
                 # log
                 if response_cleaned:
                     log.debug('Json response: %s', response_cleaned.keys()
-                        if isinstance(response_cleaned, dict) else response_cleaned[0].keys())
+                    if isinstance(response_cleaned, dict) else response_cleaned[0].keys())
         except (json.decoder.JSONDecodeError, aiohttp.client_exceptions.ContentTypeError):
             raise ThirdPartyApiException(
                 f'{self.api_provider_name} non-JSON response: Res [{res.status}] ({res}): {response_cleaned}')
@@ -103,18 +104,24 @@ class TikTokRapidAPIClient(BaseThirdPartyAPIClient):
         'x-rapidapi-key': settings.TIKTOK_RAPIDAPI_KEY,
     }
 
-    async def get_selected_video(self, url: str) -> list:
+    async def get_selected_video(self, url: str) -> dict:
         res = await self.request(
             edge='',
             querystring={"url": url},
             url=settings.TIKTOK_RAPIDAPI_URL,
         )
-        return res['data']
+        return res
 
-    async def get_selected_music(self, url: str) -> list:
+    async def get_selected_music(self, url: str) -> dict:
         res = await self.request(
             edge='music/info',
             querystring={"url": url},
             url=settings.TIKTOK_RAPIDAPI_URL,
         )
-        return res['data']
+        return res
+
+    async def get_unknown_media(self, url: str) -> dict:
+        if (res := await self.get_selected_video(url))['code'] == -1:
+            if (res := await self.get_selected_music(url))['code'] == -1:
+                raise exceptions.WrongInputException(url)
+        return res

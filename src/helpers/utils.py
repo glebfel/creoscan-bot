@@ -1,7 +1,7 @@
 from helpers.base import BaseHelper
 from helpers.instagram import InstagramSelectedUserStoryParserHelper, InstagramUserStoriesParserHelper, \
     InstagramSelectedReelParserHelper
-from helpers.tiktok import TikTokSelectedMusicParserHelper, TikTokSelectedVideoParserHelper
+from helpers.tiktok import TikTokSelectedMusicParserHelper, TikTokSelectedVideoParserHelper, TikTokUnknownMediaTypeParserHelper
 
 
 def get_helper_class_from_link_instagram(text: str) -> BaseHelper:
@@ -16,8 +16,11 @@ def get_helper_class_from_link_instagram(text: str) -> BaseHelper:
 def get_helper_class_from_link_tiktok(text: str) -> BaseHelper:
     if '/video/' in text:
         return TikTokSelectedVideoParserHelper
-    else:
+    if '/music/' in text:
         return TikTokSelectedMusicParserHelper
+    else:
+        # for universal links: https://vt.tiktok.com/ZS8rh8oAH/
+        return TikTokUnknownMediaTypeParserHelper
 
 
 def extract_username_from_link_instagram(link: str) -> str:

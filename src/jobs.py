@@ -122,10 +122,10 @@ async def get_tiktok_media(
     except exceptions.WrongInputException:
         await message.reply(text=api_adapter_module.wrong_input_text, reply_to_message_id=message.id)
     else:
-        if 'video' in helper_data['play']:
+        if 'video' in helper_data['data']['play']:
             text = module.result_text.format(media_type='видео')
             await message.reply_video(
-                video=helper_data['play'],
+                video=helper_data['data']['play'],
                 reply_to_message_id=message.id,
                 reply_markup=module.keyboard,
                 caption=text
@@ -133,7 +133,7 @@ async def get_tiktok_media(
         else:
             text = module.result_text.format(media_type='музыку')
             await message.reply_audio(
-                audio=helper_data['play'],
+                audio=helper_data['data']['play'],
                 reply_to_message_id=message.id,
                 reply_markup=module.keyboard,
                 caption=text
