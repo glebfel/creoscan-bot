@@ -122,7 +122,7 @@ async def get_tiktok_media(
     except exceptions.WrongInputException:
         await message.reply(text=api_adapter_module.wrong_input_text, reply_to_message_id=message.id)
     else:
-        if len(helper_data) > 10:
+        if 'video' in helper_data['play']:
             await message.reply_video(
                 video=helper_data['play'],
                 reply_to_message_id=message.id,
