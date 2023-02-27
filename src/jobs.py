@@ -60,10 +60,10 @@ async def get_user_instagram_media(
     except exceptions.EmptyResultsException:
         await message.reply(text=custom_error_message, reply_to_message_id=message.id)
     except exceptions.ThirdPartyApiException:
-        await message.reply(api_adapter_module.unhandled_error_text)
+        await message.reply(module.unhandled_error_text)
         raise  # unhanled error, let top-level decorator to know about it
     except exceptions.WrongInputException:
-        await message.reply(text=api_adapter_module.wrong_input_text, reply_to_message_id=message.id)
+        await message.reply(text=module.wrong_input_text, reply_to_message_id=message.id)
     else:
         # collect all media links
         media_content = []
@@ -117,10 +117,10 @@ async def get_tiktok_media(
     except exceptions.EmptyResultsException:
         await message.reply(text=custom_error_message, reply_to_message_id=message.id)
     except exceptions.ThirdPartyApiException:
-        await message.reply(api_adapter_module.unhandled_error_text)
+        await message.reply(module.unhandled_error_text)
         raise  # unhanled error, let top-level decorator to know about it
     except exceptions.WrongInputException:
-        await message.reply(text=api_adapter_module.wrong_input_text, reply_to_message_id=message.id)
+        await message.reply(text=module.wrong_input_text, reply_to_message_id=message.id)
     else:
         if 'video' in helper_data['data']['play']:
             text = module.result_text.format(media_type='видео')
