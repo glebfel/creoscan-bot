@@ -1,5 +1,6 @@
 import logging
 from dataclasses import dataclass
+from datetime import timedelta, datetime
 
 from pyrogram import Client, filters
 from pyrogram.types import (
@@ -9,11 +10,14 @@ from pyrogram.types import (
     ReplyKeyboardMarkup,
 )
 
+import settings
+from addons.Telemetry import EventLabelAccountActionTypeValue
 from addons.Trottling import handle_trottling_decorator
 from common.decorators import (
     handle_common_exceptions_decorator,
     inform_user_decorator,
 )
+from db.connector import database_connector
 from models import BotModule
 from ..base import callback as base_callback
 from ..base import get_modules_buttons
@@ -61,5 +65,39 @@ module = IntroductionModule(name='introduction')
 @handle_trottling_decorator
 @inform_user_decorator
 async def callback(client: Client, update: CallbackQuery | Message) -> None:
-    await base_callback(client, module, update)
+    # save or update the user in DB
+    userdata = dict(
+        user_id=update.from_user.id,
+        firstname=update.from_user.first_name,
+        lastname=update.from_user.last_name,
+        username=update.from_user.username,
+        chat_id=update.from_user.id,
+    )
 
+    user = await database_connector.get_user(
+        username=update.from_user.username,
+        user_id=update.from_user.id,
+    )
+    log.debug('User exists: %s', user)
+
+    utm = [str(arg) for arg in update.command if str(arg).startswith('utm_')]
+    log.debug('Got utm list: %s', utm)
+
+    if utm and (
+            not user  # new user
+            or not user.utm_created_at  # old user, but never followed utm
+            or user.utm_created_at + timedelta(days=settings.UTM_COOLDOWN_DAYS) < datetime.now()  # utm is outdated
+    ):
+        userdata['utm'] = utm
+
+    if not user or user.blocked:
+        _event_type = EventLabelAccountActionTypeValue.registration if not user \
+            else EventLabelAccountActionTypeValue.unblock
+
+        # send registration event
+        log.debug('Sending %s event...', 'registration' if not user else 'unblocking')
+
+    log.debug('Saving user: %s', userdata)
+    await database_connector.store_or_update_user(**userdata)
+
+    await base_callback(client, module, update)
