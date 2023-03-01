@@ -90,3 +90,19 @@ class UserRoleBit(enum.IntEnum):
     manager = 1  # can perform announces
     content_creator = 2  # can add/delete smm cards
     spectator = 3  # can get statistics
+
+
+class ThirdPartyAPIMediaType(enum.IntEnum):
+    """
+    Defines available media types from third party APIs.
+    """
+    photo = 0
+    video = 1
+    audio = 2
+
+
+@dataclass
+class ThirdPartyAPIClientAnswer:
+    media_type: ThirdPartyAPIMediaType
+    media_id: str
+    media_url: str
