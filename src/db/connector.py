@@ -69,7 +69,7 @@ class DatabaseConnector():
             updatetable_values['utm_created_at'] = datetime.datetime.now()
 
         update_query = insert_query.on_conflict_do_update(
-            constraint='users_user_id_username_key',
+            constraint='unique_user_id',
             set_=updatetable_values,
         )
 

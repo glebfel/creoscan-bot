@@ -31,7 +31,7 @@ user_table = Table(
     Column('utm_created_at', DateTime, nullable=True),
     Column('utm', ARRAY(String), nullable=True),
     Column('paid_requests_count', BigInteger, default=0),
-    UniqueConstraint('user_id', 'username', name='users_user_id_username_key'),
+    UniqueConstraint('user_id', 'username', name='unique_user_id'),
 )
 
 
