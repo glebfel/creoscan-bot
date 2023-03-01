@@ -14,7 +14,8 @@ from models import Module
 
 from .clients import (
     BaseThirdPartyAPIClient,
-    RapidAPIClient,
+    InstagramRapidAPIClient,
+    TikTokRapidAPIClient,
 )
 
 
@@ -43,7 +44,8 @@ class BaseHelper:
     _search_results = None  # cache for obtained search results
 
     clients = (
-        RapidAPIClient,
+        InstagramRapidAPIClient,
+        TikTokRapidAPIClient,
     )
 
     def __init__(self, message: Message):
