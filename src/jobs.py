@@ -2,7 +2,7 @@ import logging
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from pyrogram import Client, errors
-from pyrogram.types import Message, InputMediaPhoto, InputMediaVideo
+from pyrogram.types import Message, InputMediaPhoto, InputMediaVideo, InputMediaAudio
 
 import exceptions
 import settings
@@ -68,11 +68,13 @@ async def get_user_instagram_media(
         # collect all media links
         media_content = []
         for media in helper_data:
-            match media['media_type']:
+            match media.media_type:
+                case 0:
+                    media_content.append(InputMediaPhoto(media=media.media_url))
                 case 1:
-                    media_content.append(InputMediaPhoto(media=media['image_versions2']['candidates'][0]['url']))
+                    media_content.append(InputMediaVideo(media=media.media_url))
                 case 2:
-                    media_content.append(InputMediaVideo(media=media['video_versions'][0]['url']))
+                    media_content.append(InputMediaAudio(media=media.media_url))
 
         try:
             # split to n-sized chunks
@@ -83,17 +85,17 @@ async def get_user_instagram_media(
         except errors.exceptions.bad_request_400.MediaEmpty:
             # if media contain unsupported video type for reply_media_group method
             for ind, media in enumerate(helper_data):
-                match media['media_type']:
-                    case 1:
+                match media.media_type:
+                    case 0:
                         await message.reply_photo(
-                            photo=media['image_versions2']['candidates'][0]['url'],
+                            photo=media.media_url,
                             reply_to_message_id=message.id if ind == (len(helper_data) - 1) else None,
                             reply_markup=module.keyboard if hasattr(module, 'keyboard') else None,
                             caption=module.result_text if ind == (len(helper_data) - 1) else None
                         )
-                    case 2:
+                    case 1:
                         await message.reply_video(
-                            video=media['video_versions'][0]['url'],
+                            video=media.media_url,
                             reply_to_message_id=message.id if ind == (len(helper_data) - 1) else None,
                             reply_markup=module.keyboard if hasattr(module, 'keyboard') else None,
                             caption=module.result_text if ind == (len(helper_data) - 1) else None
