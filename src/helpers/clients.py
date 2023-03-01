@@ -137,7 +137,7 @@ class InstagramRapidAPIClient(BaseThirdPartyAPIClient):
         )
         answer = []
         for story in raw_data['reels'][f'highlight:{highlight_id}']['items']:
-            match raw_data['media_type']:
+            match story['media_type']:
                 case 1:
                     answer.append(ThirdPartyAPIClientAnswer(media_type=ThirdPartyAPIMediaType.photo,
                                                             media_id=story['pk'],
