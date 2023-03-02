@@ -127,15 +127,31 @@ class InstagramRapidAPIClient(BaseThirdPartyAPIClient):
                 answer.append(ThirdPartyAPIClientAnswer(media_type=ThirdPartyAPIMediaType.video,
                                                         media_id=raw_data['pk'],
                                                         media_url=raw_data['video_versions'][0]['url']))
+            case 8:
+                # carousel media
+                for media in raw_data['carousel_media']:
+                    match media['media_type']:
+                        case 1:
+                            answer.append(ThirdPartyAPIClientAnswer(media_type=ThirdPartyAPIMediaType.photo,
+                                                                    media_id=media['pk'],
+                                                                    media_url=
+                                                                    media['image_versions2']['candidates'][0][
+                                                                        'url']))
+                        case 2:
+                            answer.append(ThirdPartyAPIClientAnswer(media_type=ThirdPartyAPIMediaType.video,
+                                                                    media_id=media['pk'],
+                                                                    media_url=media['video_versions'][0]['url']))
         return answer
 
-    async def get_user_highlights(self, highlight_id: str) -> list[ThirdPartyAPIClientAnswer]:
+    async def get_user_highlights(self, highlight_url: str) -> list[ThirdPartyAPIClientAnswer]:
         raw_data = await self.request(
             edge='user/stories/highlights',
-            querystring={"url": f"https://www.instagram.com/stories/highlights/{highlight_id}/"},
+            querystring={"url": highlight_url},
             url=settings.INSTAGRAM_RAPIDAPI_URL,
         )
         answer = []
+        # extract highlight id
+        highlight_id = highlight_url.split('?')[0].strip('/').split('/')[-1]
         for story in raw_data['reels'][f'highlight:{highlight_id}']['items']:
             match story['media_type']:
                 case 1:
@@ -164,7 +180,8 @@ class InstagramRapidAPIClient(BaseThirdPartyAPIClient):
         )
         answer = [ThirdPartyAPIClientAnswer(media_type=ThirdPartyAPIMediaType.audio,
                                             media_id=music_id,
-                                            media_url=raw_data['metadata']['original_sound_info']['progressive_download_url'])]
+                                            media_url=raw_data['metadata']['original_sound_info']
+                                            ['progressive_download_url'])]
         return answer
 
 
@@ -175,24 +192,31 @@ class TikTokRapidAPIClient(BaseThirdPartyAPIClient):
         'x-rapidapi-key': settings.TIKTOK_RAPIDAPI_KEY,
     }
 
-    async def get_selected_video(self, url: str) -> dict:
-        res = await self.request(
+    async def get_selected_video(self, url: str) -> ThirdPartyAPIClientAnswer:
+        raw_data = await self.request(
             edge='',
             querystring={"url": url},
             url=settings.TIKTOK_RAPIDAPI_URL,
         )
-        return res
+        if raw_data['code'] == -1:
+            return ThirdPartyAPIClientAnswer()
+        return ThirdPartyAPIClientAnswer(media_type=ThirdPartyAPIMediaType.video,
+                                         media_url=raw_data['data']['play'])
 
-    async def get_selected_music(self, url: str) -> dict:
-        res = await self.request(
+    async def get_selected_music(self, url: str) -> ThirdPartyAPIClientAnswer:
+        raw_data = await self.request(
             edge='music/info',
             querystring={"url": url},
             url=settings.TIKTOK_RAPIDAPI_URL,
         )
-        return res
+        if raw_data['code'] == -1:
+            return ThirdPartyAPIClientAnswer()
 
-    async def get_unknown_media(self, url: str) -> dict:
-        if (res := await self.get_selected_video(url))['code'] == -1:
-            if (res := await self.get_selected_music(url))['code'] == -1:
+        return ThirdPartyAPIClientAnswer(media_type=ThirdPartyAPIMediaType.audio,
+                                         media_url=raw_data['data']['play'])
+
+    async def get_unknown_media(self, url: str) -> ThirdPartyAPIClientAnswer:
+        if (res := await self.get_selected_video(url)).media_type == ThirdPartyAPIMediaType.unknown:
+            if (res := await self.get_selected_music(url)).media_type == ThirdPartyAPIMediaType.unknown:
                 raise exceptions.WrongInputException(url)
         return res
