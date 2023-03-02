@@ -96,13 +96,14 @@ class ThirdPartyAPIMediaType(enum.IntEnum):
     """
     Defines available media types from third party APIs.
     """
-    photo = 0
-    video = 1
-    audio = 2
+    unknown = 0
+    photo = 1
+    video = 2
+    audio = 3
 
 
 @dataclass
 class ThirdPartyAPIClientAnswer:
-    media_type: ThirdPartyAPIMediaType
-    media_id: str
-    media_url: str
+    media_type: ThirdPartyAPIMediaType = field(default=ThirdPartyAPIMediaType.unknown)
+    media_url: str = field(default='')
+    media_id: str = field(default='')
