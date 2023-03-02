@@ -13,9 +13,9 @@ class TimestampMixin:
 
 
 class Users(Model, TimestampMixin, IdMixin):
-    firstname = fields.CharField(max_length=255)
-    lastname = fields.CharField(max_length=255)
-    username = fields.CharField(max_length=255)
+    firstname = fields.CharField(max_length=255, null=True)
+    lastname = fields.CharField(max_length=255, null=True)
+    username = fields.CharField(max_length=255, null=True)
     chat_id = fields.BigIntField()
     user_id = fields.BigIntField(unique=True)
     role = fields.IntField(null=True)
