@@ -12,7 +12,7 @@ command -v poetry >/dev/null || (printf "\e[0;31mpoetry not installed!\e[0m"; ex
 [ -f .env ] || (printf "\e[0;31m.env file not found!\e[0m" && exit 1)
 
 VERSION=$(git branch --show-current)
-sed -i "s/BOT_VERSION=.*/BOT_VERSION=$VERSION/" .env
+sed -i "s%BOT_VERSION=.*%BOT_VERSION=$VERSION%" .env
 
 # check if .env file is up to date
 while read -r line

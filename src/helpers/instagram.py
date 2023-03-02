@@ -71,4 +71,67 @@ class InstagramSelectedReelParserHelper(BaseHelper):
         return [reel_id]
 
     def __str__(self):
-        return 'instagram_selected_user_story_parser'
+        return 'instagram_selected_reel_parser'
+
+
+class InstagramSelectedMusicParserHelper(BaseHelper):
+    _search_method = 'get_selected_music'
+
+    @property
+    def keyword(self):
+        """
+        links can be in forms of:
+            https://www.instagram.com/reels/audio/780162617153963
+        """
+        if not (text := self._message.text):
+            raise WrongInputException(self._message.text or self._message.media)
+
+        # extract music id
+        music_id = text.split('?')[0].strip('/').split('/')[-1]
+
+        # return list because of unpacking args process
+        return [music_id]
+
+    def __str__(self):
+        return 'instagram_selected_music_parser'
+
+
+class InstagramSelectedPostParserHelper(BaseHelper):
+    _search_method = 'get_selected_post'
+
+    @property
+    def keyword(self):
+        """
+        links can be in forms of:
+            https://www.instagram.com/p/CpNbhT8NOP1/?utm_source=ig_web_copy_link
+        """
+        if not (text := self._message.text):
+            raise WrongInputException(self._message.text or self._message.media)
+
+        # extract post id
+        post_id = text.split('?')[0].strip('/').split('/')[-1]
+
+        # return list because of unpacking args process
+        return [post_id]
+
+    def __str__(self):
+        return 'instagram_selected_post_parser'
+
+
+class InstagramSelectedUserHighlightsParserHelper(BaseHelper):
+    _search_method = 'get_user_highlights'
+
+    @property
+    def keyword(self):
+        """
+        links can be in forms of:
+            https://www.instagram.com/stories/highlights/17946185029998255/
+        """
+        if not (text := self._message.text):
+            raise WrongInputException(self._message.text or self._message.media)
+
+        # return list because of unpacking args process
+        return [text]
+
+    def __str__(self):
+        return 'instagram_user_highlights_parser'

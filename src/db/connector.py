@@ -54,6 +54,7 @@ class DatabaseConnector:
                                                'blocked', 'updated_at',
                                                'utm', 'utm_created_at'])
 
+
     async def save_user_paid_requests_count(self, user_id: int, requests_count: int) -> None:
         await Users.filter(user_id=user_id).update(paid_requests_count=+ requests_count)
 

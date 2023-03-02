@@ -1,6 +1,7 @@
 import logging
 from dataclasses import dataclass
-from datetime import timedelta, datetime
+from datetime import datetime, timedelta
+
 
 from pyrogram import Client, filters
 from pyrogram.types import (
@@ -11,7 +12,6 @@ from pyrogram.types import (
 )
 
 import settings
-from addons.Telemetry import EventLabelAccountActionTypeValue
 from addons.Trottling import handle_trottling_decorator
 from common.decorators import (
     handle_common_exceptions_decorator,
@@ -84,18 +84,11 @@ async def callback(client: Client, update: CallbackQuery | Message) -> None:
     log.debug('Got utm list: %s', utm)
 
     if utm and (
-            not user  # new user
-            or not user.utm_created_at  # old user, but never followed utm
-            or user.utm_created_at + timedelta(days=settings.UTM_COOLDOWN_DAYS) < datetime.now()  # utm is outdated
+        not user  # new user
+        or not user.utm_created_at  # old user, but never followed utm
+        or user.utm_created_at + timedelta(days=settings.UTM_COOLDOWN_DAYS) < datetime.now()  # utm is outdated
     ):
         userdata['utm'] = utm
-
-    if not user or user.blocked:
-        _event_type = EventLabelAccountActionTypeValue.registration if not user \
-            else EventLabelAccountActionTypeValue.unblock
-
-        # send registration event
-        log.debug('Sending %s event...', 'registration' if not user else 'unblocking')
 
     log.debug('Saving user: %s', userdata)
     await database_connector.store_or_update_user(**userdata)

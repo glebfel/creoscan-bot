@@ -1,6 +1,6 @@
 [tool.poetry]
-name = "datafanbot"
-version = "0.1.0"
+name = "creoscanbot"
+version = "0.2.0"
 description = ""
 authors = ["Shishkin Alexander <shishkin.alexander@disroot.org>"]
 readme = "README.md"
