@@ -15,7 +15,7 @@ BOT=${REPO_NAME%%.git}  # -> tg-bot-<NAME>
 while read local_ref local_sha remote_ref remote_sha
 do
     # cut branch name from 'refs/heads/<branch>'
-    BRANCH=${remote_ref##*/}
+    BRANCH=${remote_ref##*heads/}
     printf "\e[0;36mTriggered \e[0;32m$BRANCH\e[0m\n"
 done
 
