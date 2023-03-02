@@ -4,15 +4,15 @@ from helpers.instagram import (InstagramSelectedUserStoryParserHelper,
                                InstagramSelectedReelParserHelper,
                                InstagramSelectedMusicParserHelper,
                                InstagramSelectedPostParserHelper,
-                               InstagramSelectedHighlightParserHelper)
+                               InstagramSelectedUserHighlightsParserHelper)
 from helpers.tiktok import (TikTokSelectedMusicParserHelper,
                             TikTokSelectedVideoParserHelper,
                             TikTokUnknownMediaTypeParserHelper)
 
 
 def get_helper_class_from_link_instagram(text: str) -> BaseHelper:
-    if '/highlights/' in text:
-        return InstagramSelectedHighlightParserHelper
+    if '/highlights/' in text or '/s/' in text:
+        return InstagramSelectedUserHighlightsParserHelper
     elif '/stories/' in text:
         return InstagramSelectedUserStoryParserHelper
     elif '/reel/' in text:

@@ -118,7 +118,7 @@ class InstagramSelectedPostParserHelper(BaseHelper):
         return 'instagram_selected_post_parser'
 
 
-class InstagramSelectedHighlightParserHelper(BaseHelper):
+class InstagramSelectedUserHighlightsParserHelper(BaseHelper):
     _search_method = 'get_user_highlights'
 
     @property
@@ -130,11 +130,8 @@ class InstagramSelectedHighlightParserHelper(BaseHelper):
         if not (text := self._message.text):
             raise WrongInputException(self._message.text or self._message.media)
 
-        # extract highlight id
-        highlight_id = text.split('?')[0].strip('/').split('/')[-1]
-
         # return list because of unpacking args process
-        return [highlight_id]
+        return [text]
 
     def __str__(self):
         return 'instagram_user_highlights_parser'
