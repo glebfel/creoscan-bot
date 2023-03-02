@@ -33,7 +33,8 @@ printf "\e[0;37mChecking tools...\e[0m\n"
 command -v docker >/dev/null || (printf "\e[0;31mdocker is not installed\e[0m\n"; exit 1)
 command -v docker-compose >/dev/null || (printf "\e[0;31mdocker-compose is not installed\e[0m\n"; exit 1)
 
-BOT_IMG="${BOT}:${BRANCH}"  # e.g. tg-bot-<NAME>:production
+BOT_VERSION=$(sed 's%/%-%g' <<< "${BRANCH}")
+BOT_IMG="${BOT}:${BOT_VERSION}"  # e.g. tg-bot-<NAME>:production
 printf "\e[0;36mBuilding \e[0;32m$BOT_IMG\e[0m...\n"
 docker build -t $BOT_IMG .
 
@@ -41,7 +42,7 @@ docker build -t $BOT_IMG .
 printf "\e[0;36mUpdating env file...\e[0m\n"
 [ -f ".env" ] || touch .env && printf "\e[0;33m.env file is empty\e[0m\n"
 sed -i "s/BOT_NAME=.*/BOT_NAME=$BOT/" .env
-sed -i "s/BOT_VERSION=.*/BOT_VERSION=$BRANCH/" .env
+sed -i "s/BOT_VERSION=.*/BOT_VERSION=$BOT_VERSION/" .env
 
 
 #while read -r line
