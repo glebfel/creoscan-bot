@@ -8,7 +8,7 @@ log = logging.getLogger(__name__)
 
 
 class TikTokSelectedVideoParserHelper(BaseHelper):
-    _search_method = 'get_selected_video'
+    _search_method = 'get_tiktok_video'
 
     @property
     def keyword(self):
@@ -22,11 +22,11 @@ class TikTokSelectedVideoParserHelper(BaseHelper):
         return [text]
 
     def __str__(self):
-        return 'tiktok_selected_video_parser'
+        return 'tiktok_video_parser'
 
 
 class TikTokSelectedMusicParserHelper(BaseHelper):
-    _search_method = 'get_selected_music'
+    _search_method = 'get_tiktok_music'
 
     @property
     def keyword(self):
@@ -40,11 +40,11 @@ class TikTokSelectedMusicParserHelper(BaseHelper):
         return [text]
 
     def __str__(self):
-        return 'tiktok_selected_music_parser'
+        return 'tiktok_music_parser'
 
 
 class TikTokUnknownMediaTypeParserHelper(BaseHelper):
-    _search_method = 'get_unknown_media'
+    _search_method = 'get_tiktok_unknown_media'
 
     @property
     def keyword(self):
@@ -58,4 +58,4 @@ class TikTokUnknownMediaTypeParserHelper(BaseHelper):
         return [text]
 
     def __str__(self):
-        return 'tiktok_unknown_media_type_parser'
+        return 'tiktok_unknown_media_parser'
