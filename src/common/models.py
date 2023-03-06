@@ -103,7 +103,7 @@ class ThirdPartyAPIMediaType(enum.IntEnum):
     audio = 3
 
 
-class ThirdPartyAPISource(enum.StrEnum):
+class ThirdPartyAPISource(AutoNameEnum):
     """
     Defines available media types from third party APIs.
     """
