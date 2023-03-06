@@ -7,7 +7,7 @@ log = logging.getLogger(__name__)
 
 
 class InstagramUserStoriesParserHelper(BaseHelper):
-    _search_method = 'get_user_stories'
+    _search_method = 'get_instagram_user_stories'
 
     @property
     def keyword(self):
@@ -31,7 +31,7 @@ class InstagramUserStoriesParserHelper(BaseHelper):
 
 
 class InstagramSelectedUserStoryParserHelper(BaseHelper):
-    _search_method = 'get_selected_story'
+    _search_method = 'get_instagram_selected_story'
 
     @property
     def keyword(self):
@@ -49,11 +49,11 @@ class InstagramSelectedUserStoryParserHelper(BaseHelper):
         return username, story_id
 
     def __str__(self):
-        return 'instagram_selected_user_story_parser'
+        return 'instagram_selected_story_parser'
 
 
 class InstagramSelectedReelParserHelper(BaseHelper):
-    _search_method = 'get_selected_reel'
+    _search_method = 'get_instagram_selected_reel'
 
     @property
     def keyword(self):
@@ -74,8 +74,8 @@ class InstagramSelectedReelParserHelper(BaseHelper):
         return 'instagram_selected_reel_parser'
 
 
-class InstagramSelectedMusicParserHelper(BaseHelper):
-    _search_method = 'get_selected_music'
+class InstagramMusicParserHelper(BaseHelper):
+    _search_method = 'get_instagram_music'
 
     @property
     def keyword(self):
@@ -93,11 +93,11 @@ class InstagramSelectedMusicParserHelper(BaseHelper):
         return [music_id]
 
     def __str__(self):
-        return 'instagram_selected_music_parser'
+        return 'instagram_music_parser'
 
 
-class InstagramSelectedPostParserHelper(BaseHelper):
-    _search_method = 'get_selected_post'
+class InstagramPostParserHelper(BaseHelper):
+    _search_method = 'get_instagram_post'
 
     @property
     def keyword(self):
@@ -115,11 +115,11 @@ class InstagramSelectedPostParserHelper(BaseHelper):
         return [post_id]
 
     def __str__(self):
-        return 'instagram_selected_post_parser'
+        return 'instagram_post_parser'
 
 
-class InstagramSelectedUserHighlightsParserHelper(BaseHelper):
-    _search_method = 'get_user_highlights'
+class InstagramUserHighlightsParserHelper(BaseHelper):
+    _search_method = 'get_instagram_user_highlights'
 
     @property
     def keyword(self):

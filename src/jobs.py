@@ -68,7 +68,7 @@ async def get_user_instagram_media(
     else:
         # collect all media links
         media_content = []
-        for media in helper_data:
+        for media in helper_data.items:
             match media.media_type:
                 case ThirdPartyAPIMediaType.photo:
                     media_content.append(InputMediaPhoto(media=media.media_url))
@@ -125,19 +125,20 @@ async def get_tiktok_media(
     except exceptions.WrongInputException:
         await message.reply(text=module.wrong_input_text, reply_to_message_id=message.id)
     else:
-        if helper_data.media_type == ThirdPartyAPIMediaType.video:
-            text = module.result_text.format(media_type='видео')
-            await message.reply_video(
-                video=helper_data.media_url,
-                reply_to_message_id=message.id,
-                reply_markup=module.keyboard,
-                caption=text
-            )
-        elif helper_data.media_type == ThirdPartyAPIMediaType.audio:
-            text = module.result_text.format(media_type='музыку')
-            await message.reply_audio(
-                audio=helper_data.media_url,
-                reply_to_message_id=message.id,
-                reply_markup=module.keyboard,
-                caption=text
-            )
+        for media in helper_data.items:
+            if media.media_type == ThirdPartyAPIMediaType.video:
+                text = module.result_text.format(media_type='видео')
+                await message.reply_video(
+                    video=media.media_url,
+                    reply_to_message_id=message.id,
+                    reply_markup=module.keyboard,
+                    caption=text
+                )
+            elif media.media_type == ThirdPartyAPIMediaType.audio:
+                text = module.result_text.format(media_type='музыку')
+                await message.reply_audio(
+                    audio=media.media_url,
+                    reply_to_message_id=message.id,
+                    reply_markup=module.keyboard,
+                    caption=text
+                )
