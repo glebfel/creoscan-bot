@@ -1,44 +1,37 @@
+import asyncio
 import datetime
 import logging
-from typing import Optional
 
-from aiopg.sa import create_engine
-from sqlalchemy import (
-    select,
-    update,
-)
-from sqlalchemy.dialects.postgresql import insert
-from sqlalchemy.sql.expression import func
+import tortoise
+from tortoise import Tortoise
 
 import settings
-
-from db.models import user_table
-
+from db.models import Users
 
 log = logging.getLogger(__name__)
 
 
-# TODO add decorator for exeptions
-class DatabaseConnector():
-    _engine = None
-    _connection = None
+class DatabaseConnector:
+    def __init__(self):
+        self._sync_init()
 
-    @property
-    async def engine(self):
-        if not self._engine:
-            self._engine = await create_engine(
-                user=settings.DB_USER,
-                database=settings.DB_NAME,
-                host=settings.DB_HOST,
-                port=settings.DB_PORT,
-                password=settings.DB_PASSWORD,
-            )
-            log.debug('Created engine for DB:\n%s:%s', settings.DB_HOST, settings.DB_PORT)
-        return self._engine
+    async def _async_init(self):
+        await Tortoise.init(
+            db_url=f'asyncpg://{settings.DB_USER}:{settings.DB_PASSWORD}@{settings.DB_HOST}:{settings.DB_PORT}/{settings.DB_NAME}',
+            modules={'models': ['db.models']},
+        )
+        # Generate the schema
+        # safe=True - generate schema if not exists in db
+        await Tortoise.generate_schemas(safe=True)
+
+    def _sync_init(self):
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(self._async_init())
 
     async def store_or_update_user(self, user_id: int, chat_id: int,
                                    firstname: str, lastname: str, username: str,
-                                   utm: list = []) -> None:
+                                   utm: list = None) -> None:
 
         query_values = dict(
             firstname=firstname,
@@ -47,113 +40,43 @@ class DatabaseConnector():
             chat_id=chat_id,
             user_id=user_id,
             blocked=False,
-            created_at=datetime.datetime.now(),
-            updated_at=datetime.datetime.now(),
+            created_at=tortoise.timezone.now(),
+            updated_at=tortoise.timezone.now(),
         )
         # store utm only if it's not empty
         if utm:
             query_values['utm'] = utm
-            query_values['utm_created_at'] = datetime.datetime.now()
+            query_values['utm_created_at'] = tortoise.timezone.now()
 
-        insert_query = insert(user_table).values(**query_values)
+        await Users.bulk_create(objects=[Users(**query_values)], on_conflict=['user_id'],
+                                update_fields=['firstname', 'lastname',
+                                               'blocked', 'updated_at',
+                                               'utm', 'utm_created_at'])
 
-        updatetable_values = dict(
-            firstname=firstname,
-            lastname=lastname,
-            blocked=False,
-            updated_at=datetime.datetime.now(),
-        )
-        # update utm only if it's not empty
-        if utm:
-            updatetable_values['utm'] = utm
-            updatetable_values['utm_created_at'] = datetime.datetime.now()
-
-        update_query = insert_query.on_conflict_do_update(
-            constraint='unique_user_id',
-            set_=updatetable_values,
-        )
-
-        async with (await self.engine).acquire() as connection:
-            await connection.execute(update_query)
 
     async def save_user_paid_requests_count(self, user_id: int, requests_count: int) -> None:
-        query = update(user_table)\
-            .where(user_table.c.user_id == user_id)\
-            .values(paid_requests_count=user_table.c.paid_requests_count + requests_count)
-
-        async with (await self.engine).acquire() as connection:
-            await connection.execute(query)
+        await Users.filter(user_id=user_id).update(paid_requests_count=+ requests_count)
 
     async def user_toggle_announce(self, user_id: int, state: bool) -> None:
-        query = update(user_table)\
-            .where(user_table.c.user_id == user_id)\
-            .values(announce_allowed=state)
-
-        async with (await self.engine).acquire() as connection:
-            await connection.execute(query)
+        await Users.filter(user_id=user_id).update(announce_allowed=state)
 
     async def user_toggle_block(self, user_id: int, state: bool = True) -> None:
-        query = update(user_table)\
-            .where(user_table.c.user_id == user_id)\
-            .values(blocked=state)
+        await Users.filter(user_id=user_id).update(blocked=state)
 
-        async with (await self.engine).acquire() as connection:
-            await connection.execute(query)
-
-    async def user_was_announced(self, user_id: int, date: Optional[datetime.datetime] = None) -> None:
+    async def user_was_announced(self, user_id: int, date: datetime.datetime = None) -> None:
         if not date:
-            date = datetime.datetime.now()
+            date = tortoise.timezone.now()
 
-        query = update(user_table)\
-            .where(user_table.c.user_id == user_id)\
-            .values(last_announced=date)
+        await Users.filter(user_id=user_id).update(last_announced=date)
 
-        async with (await self.engine).acquire() as connection:
-            await connection.execute(query)
-
-    # TODO make one query + dataclass with properties
     async def get_users_count(self) -> int:
-        query = select(func.count())\
-            .select_from(user_table)\
-            .where(~user_table.c.blocked)
-
-        async with (await self.engine).acquire() as connection:
-            return await (await connection.execute(query)).scalar()
+        return await Users.filter(blocked=False).all().count()
 
     async def get_users_count_all(self) -> int:
-        query = select(func.count())\
-            .select_from(user_table)\
+        return await Users.all().count()
 
-        async with (await self.engine).acquire() as connection:
-            return await (await connection.execute(query)).scalar()
-
-    async def get_user_ids_for_announce(self) -> int:
-        query = select(user_table.c.user_id)\
-            .where(
-                (~user_table.c.blocked) &
-                (user_table.c.announce_allowed) &
-                (
-                     (user_table.c.last_announced.is_(None)) |
-                     (user_table.c.last_announced < (
-                        datetime.datetime.now() - datetime.timedelta(hours=settings.ANNOUNCE_DELAY_BETWEEN_ANNOUNCES_H)
-                     ))
-                )
-            )
-
-        async with (await self.engine).acquire() as connection:
-            res = await connection.execute(query)
-            res = await res.fetchall()
-            return [row[0] for row in res]
-
-    async def get_user(self, username: str, user_id: int) -> user_table:
-        query = select(user_table)\
-            .where(
-                (user_table.c.username == username) &
-                (user_table.c.user_id == user_id)
-            )
-
-        async with (await self.engine).acquire() as connection:
-            return await (await connection.execute(query)).first()
+    async def get_user(self, user_id: int) -> Users:
+        return await Users.filter(user_id=user_id).first()
 
 
 database_connector = DatabaseConnector()
