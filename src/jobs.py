@@ -76,30 +76,33 @@ async def get_user_instagram_media(
                     media_content.append(InputMediaVideo(media=media.media_url))
                 case ThirdPartyAPIMediaType.audio:
                     media_content.append(InputMediaAudio(media=media.media_url))
-
+        # send media
+        # add counter to keep media count in case of exceptions occur
+        sent_counter = 0
         try:
             # split to n-sized chunks
             for media_groups in chunks(media_content, 10):
                 await message.reply_media_group(media=media_groups)
+                sent_counter += 10
             # reply with result text
             await message.reply_text(text=module.result_text)
         except errors.exceptions.bad_request_400.MediaEmpty:
             # if media contain unsupported video type for reply_media_group method
-            for ind, media in enumerate(helper_data):
-                match media.media_type:
+            for i in range(sent_counter, len(helper_data.items)):
+                match helper_data.items[i].media_type:
                     case 1:
                         await message.reply_photo(
-                            photo=media.media_url,
-                            reply_to_message_id=message.id if ind == (len(helper_data) - 1) else None,
+                            photo=helper_data.items[i].media_url,
+                            reply_to_message_id=message.id if i == (len(helper_data.items) - 1) else None,
                             reply_markup=module.keyboard if hasattr(module, 'keyboard') else None,
-                            caption=module.result_text if ind == (len(helper_data) - 1) else None
+                            caption=module.result_text if i == (len(helper_data.items) - 1) else None
                         )
                     case 2:
                         await message.reply_video(
-                            video=media.media_url,
-                            reply_to_message_id=message.id if ind == (len(helper_data) - 1) else None,
+                            video=helper_data.items[i].media_url,
+                            reply_to_message_id=message.id if i == (len(helper_data.items) - 1) else None,
                             reply_markup=module.keyboard if hasattr(module, 'keyboard') else None,
-                            caption=module.result_text if ind == (len(helper_data) - 1) else None
+                            caption=module.result_text if i == (len(helper_data.items) - 1) else None
                         )
 
 
