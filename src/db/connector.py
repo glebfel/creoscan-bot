@@ -76,8 +76,8 @@ class DatabaseConnector:
     async def get_users_count_all(self) -> int:
         return await Users.all().count()
 
-    async def get_user(self, username: str, user_id: int) -> Users:
-        return await Users.filter(Q(username=username) & Q(user_id=user_id)).first()
+    async def get_user(self, user_id: int) -> Users:
+        return await Users.filter(user_id=user_id).first()
 
 
 database_connector = DatabaseConnector()

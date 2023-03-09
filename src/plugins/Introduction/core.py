@@ -74,10 +74,7 @@ async def callback(client: Client, update: CallbackQuery | Message) -> None:
         chat_id=update.from_user.id,
     )
 
-    user = await database_connector.get_user(
-        username=update.from_user.username,
-        user_id=update.from_user.id,
-    )
+    user = await database_connector.get_user(user_id=update.from_user.id)
     log.debug('User exists: %s', user)
 
     utm = [str(arg) for arg in update.command if str(arg).startswith('utm_')]

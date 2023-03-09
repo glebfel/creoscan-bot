@@ -66,10 +66,7 @@ def restricted_method_decorator(func):
         from common.commands import help_command
 
         allowed_role: UserRoleBit = instance.allowed_role
-        user_role: int = (await database_connector.get_user(
-            username=update.from_user.username,
-            user_id=update.from_user.id,
-        )).role
+        user_role: int = (await database_connector.get_user(user_id=update.from_user.id)).role
 
         log.debug(
             'Checking user "%s" role "%s" before accessing module "%s" with restriction "%s"',
