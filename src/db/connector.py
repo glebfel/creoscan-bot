@@ -79,5 +79,12 @@ class DatabaseConnector:
     async def get_user(self, user_id: int) -> Users:
         return await Users.filter(user_id=user_id).first()
 
+    async def get_user_ids_for_announce(self) -> list[int]:
+        users = await Users.filter(Q(blocked=False) &
+                                   Q(announce_allowed=True) &
+                                   Q(Q(last_announced=None) | Q(Users.last_announced < datetime.datetime.now() -
+                                                                datetime.timedelta(
+                                                                    hours=settings.ANNOUNCE_DELAY_BETWEEN_ANNOUNCES_H)))).all()
+        return [user.user_id for user in users]
 
 database_connector = DatabaseConnector()
