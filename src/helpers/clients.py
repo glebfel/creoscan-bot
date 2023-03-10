@@ -90,7 +90,7 @@ class InstagramRapidAPIClient(BaseThirdPartyAPIClient):
                 case 2:
                     items.append(ThirdPartyAPIMediaItem(media_type=ThirdPartyAPIMediaType.video,
                                                         media_id=media['pk'],
-                                                        media_url=media['video_versions'][0]['url']))
+                                                        media_url=media['video_versions'][-1]['url']))
         return ThirdPartyAPIClientAnswer(
             source=ThirdPartyAPISource.instagram,
             items=items,
@@ -111,7 +111,7 @@ class InstagramRapidAPIClient(BaseThirdPartyAPIClient):
             case 2:
                 items.append(ThirdPartyAPIMediaItem(media_type=ThirdPartyAPIMediaType.video,
                                                     media_id=raw_data['pk'],
-                                                    media_url=raw_data['video_versions'][0]['url']))
+                                                    media_url=raw_data['video_versions'][-1]['url']))
         return ThirdPartyAPIClientAnswer(
             source=ThirdPartyAPISource.instagram,
             items=items,
@@ -132,7 +132,7 @@ class InstagramRapidAPIClient(BaseThirdPartyAPIClient):
             case 2:
                 items.append(ThirdPartyAPIMediaItem(media_type=ThirdPartyAPIMediaType.video,
                                                     media_id=raw_data['pk'],
-                                                    media_url=raw_data['video_versions'][0]['url']))
+                                                    media_url=raw_data['video_versions'][-1]['url']))
             case 8:
                 # carousel media
                 for media in raw_data['carousel_media']:
@@ -146,7 +146,7 @@ class InstagramRapidAPIClient(BaseThirdPartyAPIClient):
                         case 2:
                             items.append(ThirdPartyAPIMediaItem(media_type=ThirdPartyAPIMediaType.video,
                                                                 media_id=media['pk'],
-                                                                media_url=media['video_versions'][0]['url']))
+                                                                media_url=media['video_versions'][-1]['url']))
         return ThirdPartyAPIClientAnswer(
             source=ThirdPartyAPISource.instagram,
             items=items,
@@ -170,7 +170,7 @@ class InstagramRapidAPIClient(BaseThirdPartyAPIClient):
                 case 2:
                     items.append(ThirdPartyAPIMediaItem(media_type=ThirdPartyAPIMediaType.video,
                                                         media_id=story['pk'],
-                                                        media_url=story['video_versions'][0]['url']))
+                                                        media_url=story['video_versions'][-1]['url']))
         return ThirdPartyAPIClientAnswer(
             source=ThirdPartyAPISource.instagram,
             items=items,
