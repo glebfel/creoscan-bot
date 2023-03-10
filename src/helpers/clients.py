@@ -194,15 +194,16 @@ class InstagramRapidAPIClient(BaseThirdPartyAPIClient):
             querystring={"audio_id": music_id},
             url=settings.INSTAGRAM_RAPIDAPI_URL,
         )
-        if not raw_data['metadata']['original_sound_info']:
-            raise EmptyResultsException()
+        # extract download url
+        if not (music_url := raw_data['metadata']['original_sound_info']):
+            if not (music_url := raw_data['metadata']['music_info']['music_asset_info']['progressive_download_url']):
+                raise EmptyResultsException()
 
         return ThirdPartyAPIClientAnswer(
             source=ThirdPartyAPISource.instagram,
             items=[ThirdPartyAPIMediaItem(media_type=ThirdPartyAPIMediaType.audio,
                                           media_id=music_id,
-                                          media_url=raw_data['metadata']['original_sound_info']
-                                          ['progressive_download_url'])]
+                                          media_url=music_url)]
         )
 
 
