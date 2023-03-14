@@ -21,6 +21,7 @@ done
 
 
 WORKTREE=/opt/${BOT}/  # e.g. /opt/tg-bot-<NAME>
+printf "\e[0;36mWorktree: \e[0;32m${WORKTREE}\e[0m"
 
 [ -d "$WORKTREE" ] || mkdir -p $WORKTREE
 cd $WORKTREE
@@ -33,7 +34,7 @@ printf "\e[0;37mChecking tools...\e[0m\n"
 command -v docker >/dev/null || (printf "\e[0;31mdocker is not installed\e[0m\n"; exit 1)
 command -v docker-compose >/dev/null || (printf "\e[0;31mdocker-compose is not installed\e[0m\n"; exit 1)
 
-BOT_VERSION=$(sed 's%/%-%g' <<< "${BRANCH}")
+BOT_VERSION=$(echo "$BRANCH" | sed 's%/%-%g')
 BOT_IMG="${BOT}:${BOT_VERSION}"  # e.g. tg-bot-<NAME>:production
 printf "\e[0;36mBuilding \e[0;32m$BOT_IMG\e[0m...\n"
 docker build -t $BOT_IMG .
