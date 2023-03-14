@@ -195,9 +195,11 @@ class InstagramRapidAPIClient(BaseThirdPartyAPIClient):
             url=settings.INSTAGRAM_RAPIDAPI_URL,
         )
         # extract download url
-        if not (music_url := raw_data['metadata']['original_sound_info']['progressive_download_url']):
+        if not (music_url := raw_data['metadata']['original_sound_info']):
             if not (music_url := raw_data['metadata']['music_info']['music_asset_info']['progressive_download_url']):
                 raise EmptyResultsException()
+        else:
+            music_url = music_url['progressive_download_url']
 
         return ThirdPartyAPIClientAnswer(
             source=ThirdPartyAPISource.instagram,
