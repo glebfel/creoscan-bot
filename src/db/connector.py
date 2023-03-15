@@ -4,6 +4,7 @@ import logging
 
 import tortoise
 from tortoise import Tortoise
+from tortoise.expressions import Q
 
 import settings
 from db.models import Users
@@ -53,7 +54,6 @@ class DatabaseConnector:
                                                'blocked', 'updated_at',
                                                'utm', 'utm_created_at'])
 
-
     async def save_user_paid_requests_count(self, user_id: int, requests_count: int) -> None:
         await Users.filter(user_id=user_id).update(paid_requests_count=+ requests_count)
 
@@ -78,5 +78,12 @@ class DatabaseConnector:
     async def get_user(self, user_id: int) -> Users:
         return await Users.filter(user_id=user_id).first()
 
+    async def get_user_ids_for_announce(self) -> list[int]:
+        users = await Users.filter(Q(blocked=False) &
+                                   Q(announce_allowed=True) &
+                                   Q(Q(last_announced=None) | Q(last_announced__lt=datetime.datetime.now() -
+                                                                datetime.timedelta(
+                                                                    hours=settings.ANNOUNCE_DELAY_BETWEEN_ANNOUNCES_H)))).all()
+        return [user.user_id for user in users]
 
 database_connector = DatabaseConnector()

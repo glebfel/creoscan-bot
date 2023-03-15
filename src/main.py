@@ -8,9 +8,6 @@ import settings
 from jobs import scheduler, send_user_stats
 
 
-# -------------------
-
-
 def main() -> None:
     # set up logging
     logging.basicConfig(level=settings.LOG_LEVEL,

@@ -12,6 +12,7 @@ class AutoNameEnum(enum.Enum):
     """
     Just like common Enum, but use names instead of numeric values.
     """
+
     def _generate_next_value_(name, start, count, last_values):
         return name
 
@@ -54,7 +55,7 @@ class AnnounceJobStats:
     @property
     def spent_time_s(self) -> int:
         return (
-            datetime.datetime.now() - datetime.datetime.strptime(self.started_at, settings.DATE_FORMAT)
+                datetime.datetime.now() - datetime.datetime.strptime(self.started_at, settings.DATE_FORMAT)
         ).seconds
 
     @property
@@ -90,3 +91,34 @@ class UserRoleBit(enum.IntEnum):
     manager = 1  # can perform announces
     content_creator = 2  # can add/delete smm cards
     spectator = 3  # can get statistics
+
+
+class ThirdPartyAPIMediaType(enum.IntEnum):
+    """
+    Defines available media types from third party APIs.
+    """
+    unknown = 0
+    photo = 1
+    video = 2
+    audio = 3
+
+
+class ThirdPartyAPISource(AutoNameEnum):
+    """
+    Defines available media types from third party APIs.
+    """
+    instagram = 'ig'
+    tiktok = 'tt'
+
+
+@dataclass
+class ThirdPartyAPIMediaItem:
+    media_type: ThirdPartyAPIMediaType = field(default=ThirdPartyAPIMediaType.unknown)
+    media_url: str = field(default='')
+    media_id: str = field(default='')
+
+
+@dataclass
+class ThirdPartyAPIClientAnswer:
+    source: ThirdPartyAPISource
+    items: list[ThirdPartyAPIMediaItem] = field(default_factory=list)

@@ -2,7 +2,7 @@ import logging
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from pyrogram import Client, errors
-from pyrogram.types import Message, InputMediaPhoto, InputMediaVideo
+from pyrogram.types import Message, InputMediaPhoto, InputMediaVideo, InputMediaAudio
 
 import exceptions
 import settings
@@ -12,6 +12,7 @@ from addons.Telemetry import (
     TelemetryEventName,
     TelemetryMeasurement,
     TelemetryMeasurementLabels, )
+from common.models import ThirdPartyAPIMediaType
 from db.connector import database_connector
 from helpers.base import api_adapter_module, BaseHelper
 from models import BotModule
@@ -67,36 +68,41 @@ async def get_user_instagram_media(
     else:
         # collect all media links
         media_content = []
-        for media in helper_data:
-            match media['media_type']:
-                case 1:
-                    media_content.append(InputMediaPhoto(media=media['image_versions2']['candidates'][0]['url']))
-                case 2:
-                    media_content.append(InputMediaVideo(media=media['video_versions'][0]['url']))
-
+        for media in helper_data.items:
+            match media.media_type:
+                case ThirdPartyAPIMediaType.photo:
+                    media_content.append(InputMediaPhoto(media=media.media_url))
+                case ThirdPartyAPIMediaType.video:
+                    media_content.append(InputMediaVideo(media=media.media_url))
+                case ThirdPartyAPIMediaType.audio:
+                    media_content.append(InputMediaAudio(media=media.media_url))
+        # send media
+        # add counter to keep media count in case of exceptions occur
+        sent_counter = 0
         try:
             # split to n-sized chunks
             for media_groups in chunks(media_content, 10):
                 await message.reply_media_group(media=media_groups)
+                sent_counter += 10
             # reply with result text
             await message.reply_text(text=module.result_text)
         except errors.exceptions.bad_request_400.MediaEmpty:
             # if media contain unsupported video type for reply_media_group method
-            for ind, media in enumerate(helper_data):
-                match media['media_type']:
+            for i in range(sent_counter, len(helper_data.items)):
+                match helper_data.items[i].media_type:
                     case 1:
                         await message.reply_photo(
-                            photo=media['image_versions2']['candidates'][0]['url'],
-                            reply_to_message_id=message.id if ind == (len(helper_data) - 1) else None,
+                            photo=helper_data.items[i].media_url,
+                            reply_to_message_id=message.id if i == (len(helper_data.items) - 1) else None,
                             reply_markup=module.keyboard if hasattr(module, 'keyboard') else None,
-                            caption=module.result_text if ind == (len(helper_data) - 1) else None
+                            caption=module.result_text if i == (len(helper_data.items) - 1) else None
                         )
                     case 2:
                         await message.reply_video(
-                            video=media['video_versions'][0]['url'],
-                            reply_to_message_id=message.id if ind == (len(helper_data) - 1) else None,
+                            video=helper_data.items[i].media_url,
+                            reply_to_message_id=message.id if i == (len(helper_data.items) - 1) else None,
                             reply_markup=module.keyboard if hasattr(module, 'keyboard') else None,
-                            caption=module.result_text if ind == (len(helper_data) - 1) else None
+                            caption=module.result_text if i == (len(helper_data.items) - 1) else None
                         )
 
 
@@ -122,19 +128,20 @@ async def get_tiktok_media(
     except exceptions.WrongInputException:
         await message.reply(text=module.wrong_input_text, reply_to_message_id=message.id)
     else:
-        if 'video' in helper_data['data']['play']:
-            text = module.result_text.format(media_type='видео')
-            await message.reply_video(
-                video=helper_data['data']['play'],
-                reply_to_message_id=message.id,
-                reply_markup=module.keyboard,
-                caption=text
-            )
-        else:
-            text = module.result_text.format(media_type='музыку')
-            await message.reply_audio(
-                audio=helper_data['data']['play'],
-                reply_to_message_id=message.id,
-                reply_markup=module.keyboard,
-                caption=text
-            )
+        for media in helper_data.items:
+            if media.media_type == ThirdPartyAPIMediaType.video:
+                text = module.result_text.format(media_type='видео')
+                await message.reply_video(
+                    video=media.media_url,
+                    reply_to_message_id=message.id,
+                    reply_markup=module.keyboard,
+                    caption=text
+                )
+            elif media.media_type == ThirdPartyAPIMediaType.audio:
+                text = module.result_text.format(media_type='музыку')
+                await message.reply_audio(
+                    audio=media.media_url,
+                    reply_to_message_id=message.id,
+                    reply_markup=module.keyboard,
+                    caption=text
+                )
