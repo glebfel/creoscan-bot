@@ -9,6 +9,7 @@ from pyrogram.types import (
 )
 
 import settings
+from addons.Permissions import restricted_method_decorator
 from helpers.state import redis_connector
 from models import Module
 
@@ -33,6 +34,7 @@ def get_modules_commands() -> list:
     ]))]
 
 
+@restricted_method_decorator
 async def callback(client: Client, module: Module, update: CallbackQuery | Message) -> None:
     """
     Base entry point to the module, responses with some introduction text
