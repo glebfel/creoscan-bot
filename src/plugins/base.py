@@ -8,16 +8,18 @@ from pyrogram.types import (
     ReplyKeyboardMarkup,
 )
 
-import settings
-from addons.Permissions import restricted_method_decorator
-from helpers.state import redis_connector
-from models import Module
+import settings  # type: ignore
+from addons.Permissions import restricted_method_decorator  # type: ignore
+from helpers.state import redis_connector  # type: ignore
+from models import Module  # type: ignore
 
 
 def get_active_modules() -> list:
     active_modules = []
     for plugin_path in settings.PLUGINS:
-        active_modules.append(getattr(importlib.import_module(f'plugins.{plugin_path}'), 'module', None))
+        module = getattr(importlib.import_module(f'plugins.{plugin_path}'), 'module', None)
+        if not hasattr(module, 'allowed_role'):
+            active_modules.append(module)
     return active_modules
 
 
@@ -25,7 +27,7 @@ def get_modules_buttons() -> list:
     return list(filter(lambda s: s.strip(), [' '.join([
         getattr(mod, 'icon', '') or '',
         getattr(mod, 'friendly_name', '') or '',
-    ]) for mod in get_active_modules()]))
+    ]).strip() for mod in get_active_modules()]))
 
 
 def get_modules_commands() -> list:
