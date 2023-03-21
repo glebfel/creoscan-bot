@@ -129,6 +129,8 @@ DAY_BORDER_HOUR = 14
 
 ANNOUNCE_PACK_LENGTH = 20
 
+SEND_MONITORING_INTERVAL = 200
+
 CONFIG_PATH = 'configs/creoscan.yaml'
 PLUGINS = [
     'Introduction.core',
