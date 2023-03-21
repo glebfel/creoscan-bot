@@ -53,4 +53,4 @@ class BotModule(Module):
 
     @property
     def button(self):
-        return ' '.join((self.icon or '', self.friendly_name or ''))
+        return ' '.join((self.icon or '', self.friendly_name or '')).strip()
