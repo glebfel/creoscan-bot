@@ -111,10 +111,7 @@ module = MonitoringModule('monitoring')
 
 @Client.on_message(filters.regex(rf'^{module.my_monitoring_button}$') |
                    filters.command(module.my_monitoring_command))
-@inform_user_decorator
-@handle_trottling_decorator
 @handle_common_exceptions_decorator
-@handle_paid_requests_trottling_decorator
 async def handle_my_monitoring(client: Client, update: CallbackQuery | Message) -> None:
     user_requests = await UserMonitoringRequests.get_user_requests(update.from_user.id)
     if len(user_requests) > 0:
@@ -266,7 +263,7 @@ def get_keyboard_select_media_type(social_network: ThirdPartyAPISource, selected
 async def handle_user_link_input(client: Client, message: Message) -> None:
     # check if user is already subscribed
     user_requests = await UserMonitoringRequests.get_user_requests(message.from_user.id)
-    if len(user_requests) > settings.FREE_MONITORING_REQUESR_COUNT:
+    if len(user_requests) >= settings.FREE_MONITORING_REQUESR_COUNT:
         text = module.monitoring_requests_exceed_error_message.format(
             available_count=settings.FREE_MONITORING_REQUESR_COUNT - len(user_requests),
             max_count=settings.FREE_MONITORING_REQUESR_COUNT)
@@ -285,17 +282,24 @@ async def handle_user_link_input(client: Client, message: Message) -> None:
                                                            media_list=f'◾ Видео'),
             reply_markup=get_keyboard_select_media_type(social_network=ThirdPartyAPISource.tiktok))
 
+        await UserMonitoringRequests.save_user_request(
+            user_id=message.from_user.id,
+            new=True,
+            nickname=nickname,
+            social_network=social_network,
+            selected_media_type='Видео')
+
     else:
         social_network = ThirdPartyAPISource.instagram.value
         await message.reply_text(
             text=module.instagram_media_type_choice_text.format(nickname=nickname),
             reply_markup=get_keyboard_select_media_type(social_network=ThirdPartyAPISource.instagram))
 
-    await UserMonitoringRequests.save_user_request(
-        user_id=message.from_user.id,
-        new=True,
-        nickname=nickname,
-        social_network=social_network, )
+        await UserMonitoringRequests.save_user_request(
+            user_id=message.from_user.id,
+            new=True,
+            nickname=nickname,
+            social_network=social_network, )
 
 
 def extract_username_from_link(message: Message) -> str:
@@ -305,7 +309,9 @@ def extract_username_from_link(message: Message) -> str:
 
 
 class UserMonitoringRequests:
-
+    """
+    Handle user's monitoring requests using redis.
+    """
     @staticmethod
     async def save_user_request(user_id: int, new=False, **kwargs) -> None:
         if new:
