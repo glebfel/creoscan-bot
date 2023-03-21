@@ -32,6 +32,11 @@ class MonitoringModule(BotModule):
     subscribe_text: str = field(init=False)
     monitoring_requests_exceed_error_message: str = field(init=False)
 
+    my_monitoring_command: str = field(init=False)
+    my_monitoring_introduction_text_active: str = field(init=False)
+    my_monitoring_introduction_text_not_active: str = field(init=False)
+    create_monitoring_button: str = field(init=False)
+
     return_button: str = field(init=False)
     my_monitoring_button: str = field(init=False)
     button_selected: str = field(init=False)
@@ -104,12 +109,37 @@ class MonitoringModule(BotModule):
 module = MonitoringModule('monitoring')
 
 
+@Client.on_message(filters.regex(rf'^{module.my_monitoring_button}$') |
+                   filters.command(module.my_monitoring_command))
+@inform_user_decorator
+@handle_trottling_decorator
+@handle_common_exceptions_decorator
+@handle_paid_requests_trottling_decorator
+async def handle_my_monitoring(client: Client, update: CallbackQuery | Message) -> None:
+    user_requests = await UserMonitoringRequests.get_user_requests(update.from_user.id)
+    if len(user_requests) > 0:
+        text = module.my_monitoring_introduction_text_active.format(
+            available_count=settings.FREE_MONITORING_REQUESR_COUNT - len(user_requests),
+            max_count=settings.FREE_MONITORING_REQUESR_COUNT)
+
+        await update.reply_text(text=text, reply_markup=module.keyboard)
+    else:
+        text = module.my_monitoring_introduction_text_not_active.format(
+            available_count=settings.FREE_MONITORING_REQUESR_COUNT - len(user_requests),
+            max_count=settings.FREE_MONITORING_REQUESR_COUNT)
+
+        await update.reply_text(text=text, reply_markup=InlineKeyboardMarkup(
+            [[InlineKeyboardButton(module.return_button, callback_data=module.return_button),
+              InlineKeyboardButton(module.create_monitoring_button, callback_data=module.create_monitoring_button)]]))
+
+
+@Client.on_callback_query(filters.regex(rf'^{module.return_button}$') |
+                          filters.regex(rf'^{module.create_monitoring_button}$'))
 @Client.on_message(filters.regex(rf'^{module.button}$') |
                    filters.command(module.command) | filters.regex(module.return_button))
 @inform_user_decorator
 @handle_trottling_decorator
 @handle_common_exceptions_decorator
-@handle_paid_requests_trottling_decorator
 async def callback(client: Client, update: CallbackQuery | Message) -> None:
     user_requests = await UserMonitoringRequests.get_user_requests(update.from_user.id)
     module.introduction_text = module.introduction_text.format(
@@ -123,6 +153,12 @@ async def callback(client: Client, update: CallbackQuery | Message) -> None:
 async def handle_subscribe(client: Client, callback_query: CallbackQuery) -> None:
     # extract user data from redis
     user_data = await UserMonitoringRequests.get_last_user_request(callback_query.from_user.id)
+
+    # made user monitoring request active
+    await UserMonitoringRequests.save_user_request(
+        user_id=callback_query.from_user.id,
+        start_date=datetime.datetime.now(),
+        active=True)
 
     start_time = datetime.datetime.now()
     if current_jobs := scheduler.get_jobs():
@@ -285,15 +321,17 @@ class UserMonitoringRequests:
             await redis_connector.save_data(key=str(user_id), data=request_list)
 
     @staticmethod
-    async def get_last_user_request(user_id: int) -> list[dict]:
+    async def get_last_user_request(user_id: int) -> dict:
         requests = await redis_connector.get_data(key=str(user_id))
         if requests:
             return requests[-1]
-        return []
 
     @staticmethod
     async def get_user_requests(user_id: int) -> list[dict]:
-        return await redis_connector.get_data(key=str(user_id))
+        requests = await redis_connector.get_data(key=str(user_id))
+        if not requests:
+            return []
+        return requests
 
     @staticmethod
     async def get_user_requests_count(user_id: int) -> int:
