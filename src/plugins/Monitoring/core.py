@@ -70,6 +70,35 @@ class MonitoringModule(BotModule):
             resize_keyboard=True,
         )
 
+    @property
+    def result_keyboard(self) -> InlineKeyboardMarkup:
+        buttons = get_modules_buttons()
+        extra_buttons = []
+
+        # align buttons in two columns
+        bottom_menu_keys_iterator = iter(buttons)
+
+        buttons_in_columns = list(
+            zip(bottom_menu_keys_iterator, bottom_menu_keys_iterator)
+        )
+
+        # if number of buttons is odd, add missing one
+        if len(buttons) % 2 != 0:
+            extra_buttons.append(buttons[-1])
+
+        """
+        Buttons for ReplyKeyboardMarkup shoul be in form of:
+        [ (button1, button2), (button3, button4), ... ]
+        """
+        buttons_in_columns.append(extra_buttons)
+
+        return ReplyKeyboardMarkup(
+            list(buttons_in_columns),
+            one_time_keyboard=False,
+            placeholder=self.friendly_name,
+            resize_keyboard=True,
+        )
+
 
 module = MonitoringModule('monitoring')
 
@@ -125,7 +154,7 @@ async def handle_subscribe(client: Client, callback_query: CallbackQuery) -> Non
         social_network=social_network.capitalize(),
         nickname=nickname, )
 
-    await callback_query.message.reply_text(text=text)
+    await callback_query.message.reply_text(text=text, reply_markup=module.result_keyboard)
 
 
 @Client.on_callback_query(filters.regex('^CONFIRM_SUBSCRIBE'))
