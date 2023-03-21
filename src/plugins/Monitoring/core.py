@@ -1,3 +1,4 @@
+import datetime
 from dataclasses import dataclass, field
 
 import validators
@@ -10,6 +11,7 @@ from pyrogram.types import (
     Message,
 )
 
+import settings
 from addons.Trottling import handle_trottling_decorator, handle_paid_requests_trottling_decorator
 from common.decorators import (
     inform_user_decorator, handle_common_exceptions_decorator,
@@ -18,6 +20,7 @@ from common.filters import conversation_filter
 from common.models import ThirdPartyAPISource
 from exceptions import WrongInputException
 from helpers.state import redis_connector
+from jobs import scheduler, start_monitoring
 from models import BotModule
 from plugins.base import callback as base_callback, get_modules_buttons
 
@@ -89,10 +92,38 @@ async def handle_subscribe(client: Client, callback_query: CallbackQuery) -> Non
                                                          user_id=callback_query.from_user.id)
     nickname = await redis_connector.get_user_data(key='nickname',
                                                    user_id=callback_query.from_user.id)
+    media_type = await redis_connector.get_user_data(key='selected_media_type',
+                                                     user_id=callback_query.from_user.id)
+
+    start_time = datetime.datetime.now()
+    if current_jobs := scheduler.get_jobs():
+        channel_stats_jobs = list(filter(lambda j: j.id.startswith('tiktok-media'), current_jobs))
+        if channel_stats_jobs:
+            last_job = channel_stats_jobs[-1]
+            start_time = last_job.next_run_time
+
+    start_time += datetime.timedelta(seconds=settings.PENDING_DELAY)
+
+    scheduler.add_job(
+        start_monitoring,
+        id=f'monitoring-{social_network}-{nickname}',
+        trigger='date',
+        name=f'Monitoring for {nickname}',
+        misfire_grace_time=None,  # run job even if it's time is overdue
+        kwargs={
+            'client': client,
+            'module': module,
+            'message': callback_query.message,
+            'social_network': social_network,
+            'nickname': nickname,
+            'media_type': media_type
+        },
+        run_date=start_time,
+    )
 
     text = module.subscribe_text.format(
         social_network=social_network.capitalize(),
-        nickname=nickname,)
+        nickname=nickname, )
 
     await callback_query.message.reply_text(text=text)
 
@@ -108,14 +139,10 @@ async def handle_subscribe_confirmation(client: Client, callback_query: Callback
     nickname = await redis_connector.get_user_data(key='nickname',
                                                    user_id=callback_query.from_user.id)
 
-    media_list_text = ''
-    for type in user_selected_media_type:
-        media_list_text += f'◾ {type}\n'
-
     text = module.subscribe_confirmation_text.format(
         social_network=social_network.capitalize(),
         nickname=nickname,
-        media_list=media_list_text)
+        media_list=f'◾ {user_selected_media_type}\n')
 
     await callback_query.message.reply_text(text=text,
                                             reply_markup=InlineKeyboardMarkup(
@@ -131,13 +158,7 @@ async def choose_media_type(client: Client, callback_query: CallbackQuery) -> No
     same, and changes entity (e.g. emoji) that represents selected hashtag.
     """
     # stashed hashtags contains only selected by user
-    media_types_selected = []
-    changed_media_type: str = callback_query.data.replace('SELECT', '')
-
-    try:
-        media_types_selected.remove(changed_media_type)
-    except ValueError:
-        media_types_selected.append(changed_media_type)
+    media_types_selected: str = callback_query.data.replace('SELECT', '')
 
     # save media type to redis storage
     await redis_connector.save_user_data(
@@ -153,9 +174,7 @@ async def choose_media_type(client: Client, callback_query: CallbackQuery) -> No
         ))
 
 
-def get_keyboard_select_media_type(social_network: ThirdPartyAPISource, selected: list = None) -> InlineKeyboardMarkup:
-    selected = selected if selected else []
-
+def get_keyboard_select_media_type(social_network: ThirdPartyAPISource, selected: str = None) -> InlineKeyboardMarkup:
     if social_network == ThirdPartyAPISource.instagram:
         media_type_buttons = [
             [
@@ -166,7 +185,7 @@ def get_keyboard_select_media_type(social_network: ThirdPartyAPISource, selected
                 InlineKeyboardButton(
                     module.button_selected if str(
                         media_type
-                    ) in selected else module.button_unselected,
+                    ) == selected else module.button_unselected,
                     callback_data=f'SELECT{str(media_type)}',
                 ),
             ] for media_type in (module.stories_button, module.posts_button, module.reels_button)
@@ -222,4 +241,4 @@ async def handle_user_link_input(client: Client, message: Message) -> None:
 def extract_username_from_link(message: Message) -> str:
     if not (link := message.text) or not validators.url(message.text):
         raise WrongInputException(message.text or message.media)
-    return '@' + link.split('/')[-1].replace('@', '')
+    return '@' + link.strip('/').split('/')[-1].replace('@', '')
