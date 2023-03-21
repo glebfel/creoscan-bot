@@ -73,7 +73,7 @@ class InstagramRapidAPIClient(BaseThirdPartyAPIClient):
         'x-rapidapi-key': settings.INSTAGRAM_RAPIDAPI_KEY,
     }
 
-    async def get_instagram_user_stories(self, username: str) -> ThirdPartyAPIClientAnswer:
+    async def get_instagram_user_stories(self, username: str, limit: int = None) -> ThirdPartyAPIClientAnswer:
         raw_data = await self.request(
             edge='user/stories',
             querystring={'username': username},
@@ -81,7 +81,9 @@ class InstagramRapidAPIClient(BaseThirdPartyAPIClient):
         )
 
         items = []
-        for media in raw_data:
+        for ind, media in enumerate(raw_data):
+            if ind == limit:
+                break
             match media['media_type']:
                 case 1:
                     items.append(ThirdPartyAPIMediaItem(media_type=ThirdPartyAPIMediaType.photo,
@@ -152,6 +154,68 @@ class InstagramRapidAPIClient(BaseThirdPartyAPIClient):
             items=items,
         )
 
+    async def get_instagram_posts_by_username(self, username: str, limit: int = None) -> ThirdPartyAPIClientAnswer:
+        raw_data = await self.request(
+            edge='user/feed/v2',
+            querystring={'username': username},
+            url=settings.INSTAGRAM_RAPIDAPI_URL,
+        )
+        items = []
+        for ind, post in enumerate(raw_data):
+            if ind == limit:
+                break
+            match post['media_type']:
+                case 1:
+                    items.append(ThirdPartyAPIMediaItem(media_type=ThirdPartyAPIMediaType.photo,
+                                                        media_id=post['pk'],
+                                                        media_url=post['image_versions2']['candidates'][0]['url']))
+                case 2:
+                    items.append(ThirdPartyAPIMediaItem(media_type=ThirdPartyAPIMediaType.video,
+                                                        media_id=post['pk'],
+                                                        media_url=post['video_versions'][-1]['url']))
+                case 8:
+                    # carousel media
+                    for media in post['carousel_media']:
+                        match media['media_type']:
+                            case 1:
+                                items.append(ThirdPartyAPIMediaItem(media_type=ThirdPartyAPIMediaType.photo,
+                                                                    media_id=media['pk'],
+                                                                    media_url=
+                                                                    media['image_versions2']['candidates'][0][
+                                                                        'url']))
+                            case 2:
+                                items.append(ThirdPartyAPIMediaItem(media_type=ThirdPartyAPIMediaType.video,
+                                                                    media_id=media['pk'],
+                                                                    media_url=media['video_versions'][-1]['url']))
+        return ThirdPartyAPIClientAnswer(
+            source=ThirdPartyAPISource.instagram,
+            items=items,
+        )
+
+    async def get_instagram_reels_by_username(self, username: str, limit: int = None) -> ThirdPartyAPIClientAnswer:
+        raw_data = await self.request(
+            edge='user/reels',
+            querystring={'username': username, 'limit': str(limit)},
+            url=settings.INSTAGRAM_RAPIDAPI_URL,
+        )
+        items = []
+        for ind, reel in enumerate(raw_data):
+            if ind == limit:
+                break
+            match reel['media_type']:
+                case 1:
+                    items.append(ThirdPartyAPIMediaItem(media_type=ThirdPartyAPIMediaType.photo,
+                                                        media_id=reel['pk'],
+                                                        media_url=reel['image_versions2']['candidates'][0]['url']))
+                case 2:
+                    items.append(ThirdPartyAPIMediaItem(media_type=ThirdPartyAPIMediaType.video,
+                                                        media_id=reel['pk'],
+                                                        media_url=reel['video_versions'][-1]['url']))
+        return ThirdPartyAPIClientAnswer(
+            source=ThirdPartyAPISource.instagram,
+            items=items,
+        )
+
     async def get_instagram_user_highlights(self, highlight_url: str) -> ThirdPartyAPIClientAnswer:
         raw_data = await self.request(
             edge='user/stories/highlights',
@@ -215,6 +279,21 @@ class TikTokRapidAPIClient(BaseThirdPartyAPIClient):
         'x-rapidapi-host': settings.TIKTOK_RAPIDAPI_EDGE,
         'x-rapidapi-key': settings.TIKTOK_RAPIDAPI_KEY,
     }
+
+    async def get_tiktok_user_video_by_username(self, username) -> ThirdPartyAPIClientAnswer:
+        raw_data = await self.request(
+            edge='user/posts',
+            querystring={"unique_id": username},
+            url=settings.TIKTOK_RAPIDAPI_URL,
+        )
+        if raw_data['code'] == -1:
+            raise EmptyResultsException()
+
+        return ThirdPartyAPIClientAnswer(
+            source=ThirdPartyAPISource.tiktok,
+            items=[ThirdPartyAPIMediaItem(media_type=ThirdPartyAPIMediaType.video,
+                                          media_url=raw_data['data']['play'])]
+        )
 
     async def get_tiktok_video(self, url: str, unknown_media: bool = False) -> ThirdPartyAPIClientAnswer:
         raw_data = await self.request(
