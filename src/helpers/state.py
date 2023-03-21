@@ -58,7 +58,7 @@ class RedisConnector():
         if isinstance(key, enum.Enum):
             key = key.value
         await (await self.connection).set(key, json.dumps(
-            asdict(data) if is_dataclass(data) else data))
+            asdict(data) if is_dataclass(data) else data, default=str))
 
     # shortcuts for per-user data
     async def get_user_data(self, key: str, user_id: int = 0) -> Any:
