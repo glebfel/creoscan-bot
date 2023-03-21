@@ -42,6 +42,9 @@ async def callback(client: Client, module: Module, update: CallbackQuery | Messa
     """
 
     # response with modules's introduction text
+    if isinstance(update, CallbackQuery):
+        update = update.message
+
     await update.reply(
         text=module.introduction_text,
         reply_markup=module.keyboard if hasattr(module, 'keyboard') else None,
