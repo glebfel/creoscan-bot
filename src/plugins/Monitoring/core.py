@@ -35,6 +35,7 @@ class MonitoringModule(BotModule):
     my_monitoring_command: str = field(init=False)
     my_monitoring_introduction_text_active: str = field(init=False)
     my_monitoring_introduction_text_not_active: str = field(init=False)
+    edit_my_monitoring_text: str = field(init=False)
     create_monitoring_button: str = field(init=False)
 
     return_button: str = field(init=False)
@@ -109,17 +110,27 @@ class MonitoringModule(BotModule):
 module = MonitoringModule('monitoring')
 
 
+@Client.on_callback_query(filters.regex('^RETURN_TO_MONITORING'))
 @Client.on_message(filters.regex(rf'^{module.my_monitoring_button}$') |
                    filters.command(module.my_monitoring_command))
 @handle_common_exceptions_decorator
 async def handle_my_monitoring(client: Client, update: CallbackQuery | Message) -> None:
     user_requests = await UserMonitoringRequests.get_user_requests(update.from_user.id)
+    if isinstance(update, CallbackQuery):
+        update = update.message
+
     if len(user_requests) > 0:
         text = module.my_monitoring_introduction_text_active.format(
             available_count=settings.FREE_MONITORING_REQUESR_COUNT - len(user_requests),
             max_count=settings.FREE_MONITORING_REQUESR_COUNT)
 
-        await update.reply_text(text=text, reply_markup=module.keyboard)
+        # generate keyboard from subscriptions
+        markup = []
+        for sub in user_requests:
+            markup.append([InlineKeyboardButton(text=f'({sub["social_network"].capitalize()}) {sub["nickname"]}',
+                                                callback_data=f'account_{sub["nickname"]}_{sub["social_network"]}')])
+
+        await update.reply_text(text=text, reply_markup=InlineKeyboardMarkup(markup))
     else:
         text = module.my_monitoring_introduction_text_not_active.format(
             available_count=settings.FREE_MONITORING_REQUESR_COUNT - len(user_requests),
@@ -128,6 +139,28 @@ async def handle_my_monitoring(client: Client, update: CallbackQuery | Message) 
         await update.reply_text(text=text, reply_markup=InlineKeyboardMarkup(
             [[InlineKeyboardButton(module.return_button, callback_data=module.return_button),
               InlineKeyboardButton(module.create_monitoring_button, callback_data=module.create_monitoring_button)]]))
+
+
+@Client.on_callback_query(filters.regex('^account_'))
+async def edit_my_monitoring_request(client: Client, callback_query: CallbackQuery) -> None:
+    nickname = callback_query.data.split('_')[1]
+    social_network = callback_query.data.split('_')[2]
+    monitoring = await UserMonitoringRequests.get_user_request_by_nickname_and_social(callback_query.from_user.id,
+                                                                                      nickname=nickname, social_network=social_network)
+
+    text = module.edit_my_monitoring_text.format(
+        nickname=monitoring['nickname'],
+        social_network=social_network.capitalize(),
+        media_type=monitoring['selected_media_type'],
+        active='активен' if monitoring['active'] else 'не активен',
+        start_date=monitoring['start_date'], )
+
+    # generate keyboard
+    markup = InlineKeyboardMarkup([[InlineKeyboardButton(text='Удалить', callback_data='DELETE'),
+                                    InlineKeyboardButton(text='Остановить', callback_data='PAUSE')],
+                                   [InlineKeyboardButton(text='<< Вернуться к мониторингам', callback_data='RETURN_TO_MONITORING')]])
+
+    await callback_query.message.edit_text(text=text, reply_markup=markup)
 
 
 @Client.on_callback_query(filters.regex(rf'^{module.return_button}$') |
@@ -154,7 +187,7 @@ async def handle_subscribe(client: Client, callback_query: CallbackQuery) -> Non
     # made user monitoring request active
     await UserMonitoringRequests.save_user_request(
         user_id=callback_query.from_user.id,
-        start_date=datetime.datetime.now(),
+        start_date=datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
         active=True)
 
     start_time = datetime.datetime.now()
@@ -312,6 +345,7 @@ class UserMonitoringRequests:
     """
     Handle user's monitoring requests using redis.
     """
+
     @staticmethod
     async def save_user_request(user_id: int, new=False, **kwargs) -> None:
         if new:
@@ -338,6 +372,13 @@ class UserMonitoringRequests:
         if not requests:
             return []
         return requests
+
+    @staticmethod
+    async def get_user_request_by_nickname_and_social(user_id: int, social_network: str, nickname: str) -> dict | None:
+        requests = await UserMonitoringRequests.get_user_requests(user_id)
+        for _ in requests:
+            if _['social_network'] == social_network and _['nickname'] == nickname:
+                return _
 
     @staticmethod
     async def get_user_requests_count(user_id: int) -> int:
