@@ -1,7 +1,6 @@
 import datetime
 from dataclasses import dataclass, field
 
-import validators
 from pyrogram import Client, filters
 from pyrogram.types import (
     CallbackQuery,
@@ -12,14 +11,14 @@ from pyrogram.types import (
 )
 
 import settings
-from addons.Trottling import handle_trottling_decorator, handle_paid_requests_trottling_decorator
+from addons.Trottling import handle_trottling_decorator
 from common.decorators import (
     inform_user_decorator, handle_common_exceptions_decorator,
 )
 from common.filters import conversation_filter
 from common.models import ThirdPartyAPISource
-from exceptions import WrongInputException
-from helpers.state import redis_connector
+from helpers.state import UserMonitoringRequests
+from helpers.utils import extract_username_from_link
 from jobs import scheduler, start_monitoring
 from models import BotModule
 from plugins.base import callback as base_callback, get_modules_buttons
@@ -30,11 +29,11 @@ class MonitoringModule(BotModule):
     instagram_media_type_choice_text: str = field(init=False)
     subscribe_confirmation_text: str = field(init=False)
     subscribe_text: str = field(init=False)
-    monitoring_requests_exceed_error_message: str = field(init=False)
+    monitoring_requests_exceed_error_text: str = field(init=False)
 
     my_monitoring_command: str = field(init=False)
-    my_monitoring_introduction_text_active: str = field(init=False)
-    my_monitoring_introduction_text_not_active: str = field(init=False)
+    my_monitoring_active_introduction_text: str = field(init=False)
+    my_monitoring_not_active_introduction_text: str = field(init=False)
     pause_monitoring_text: str = field(init=False)
     delete_confirmation_text: str = field(init=False)
     delete_text: str = field(init=False)
@@ -123,7 +122,7 @@ async def handle_my_monitoring(client: Client, update: CallbackQuery | Message) 
         update = update.message
 
     if len(user_requests) > 0:
-        text = module.my_monitoring_introduction_text_active.format(
+        text = module.my_monitoring_active_introduction_text.format(
             available_count=settings.FREE_MONITORING_REQUESR_COUNT - len(user_requests),
             max_count=settings.FREE_MONITORING_REQUESR_COUNT)
 
@@ -135,7 +134,7 @@ async def handle_my_monitoring(client: Client, update: CallbackQuery | Message) 
 
         await update.reply_text(text=text, reply_markup=InlineKeyboardMarkup(markup))
     else:
-        text = module.my_monitoring_introduction_text_not_active.format(
+        text = module.my_monitoring_not_active_introduction_text.format(
             available_count=settings.FREE_MONITORING_REQUESR_COUNT - len(user_requests),
             max_count=settings.FREE_MONITORING_REQUESR_COUNT)
 
@@ -210,7 +209,8 @@ async def delete_confirmation_my_monitoring_request(client: Client, callback_que
     markup = InlineKeyboardMarkup(
         [[InlineKeyboardButton(text='Нет, забудь', callback_data=f'RETURN_TO_EDIT')],
          [InlineKeyboardButton(text='Да, я уверен', callback_data=f'CONFIRM_DELETE_{nickname}_{social_network}')],
-         [InlineKeyboardButton(text='<< Вернуться к редактированию', callback_data=f'RETURN_TO_EDIT_{nickname}_{social_network}')]])
+         [InlineKeyboardButton(text='<< Вернуться к редактированию',
+                               callback_data=f'RETURN_TO_EDIT_{nickname}_{social_network}')]])
 
     await callback_query.message.edit_text(text=text, reply_markup=markup)
 
@@ -269,7 +269,7 @@ async def handle_subscribe(client: Client, callback_query: CallbackQuery) -> Non
 
     start_time = datetime.datetime.now()
     if current_jobs := scheduler.get_jobs():
-        channel_stats_jobs = list(filter(lambda j: j.id.startswith('tiktok-media'), current_jobs))
+        channel_stats_jobs = list(filter(lambda j: j.id.startswith('monitoring'), current_jobs))
         if channel_stats_jobs:
             last_job = channel_stats_jobs[-1]
             start_time = last_job.next_run_time
@@ -374,7 +374,7 @@ async def handle_user_link_input(client: Client, message: Message) -> None:
     # check if user is already subscribed
     user_requests = await UserMonitoringRequests.get_user_requests(message.from_user.id)
     if len(user_requests) >= settings.FREE_MONITORING_REQUESR_COUNT:
-        text = module.monitoring_requests_exceed_error_message.format(
+        text = module.monitoring_requests_exceed_error_text.format(
             available_count=settings.FREE_MONITORING_REQUESR_COUNT - len(user_requests),
             max_count=settings.FREE_MONITORING_REQUESR_COUNT)
         await message.reply_text(text=text,
@@ -410,63 +410,3 @@ async def handle_user_link_input(client: Client, message: Message) -> None:
             new=True,
             nickname=nickname,
             social_network=social_network, )
-
-
-def extract_username_from_link(message: Message) -> str:
-    if not (link := message.text) or not validators.url(message.text):
-        raise WrongInputException(message.text or message.media)
-    return '@' + link.strip('/').split('/')[-1].replace('@', '')
-
-
-class UserMonitoringRequests:
-    """
-    Handle user's monitoring requests using redis.
-    """
-
-    @staticmethod
-    async def save_user_request(user_id: int, new=False, **kwargs) -> None:
-        if new:
-            request_list = await redis_connector.get_data(key=str(user_id))
-            if not request_list:
-                await redis_connector.save_data(key=str(user_id), data=[kwargs])
-            else:
-                request_list.append(kwargs)
-                await redis_connector.save_data(key=str(user_id), data=request_list)
-        else:
-            request_list = await redis_connector.get_data(key=str(user_id))
-            request_list[-1].update(kwargs)
-            await redis_connector.save_data(key=str(user_id), data=request_list)
-
-    @staticmethod
-    async def get_last_user_request(user_id: int) -> dict:
-        requests = await redis_connector.get_data(key=str(user_id))
-        if requests:
-            return requests[-1]
-
-    @staticmethod
-    async def get_user_requests(user_id: int) -> list[dict]:
-        requests = await redis_connector.get_data(key=str(user_id))
-        if not requests:
-            return []
-        return requests
-
-    @staticmethod
-    async def get_user_request_by_nickname_and_social(user_id: int, social_network: str, nickname: str) -> dict | None:
-        requests = await UserMonitoringRequests.get_user_requests(user_id)
-        for _ in requests:
-            if _['social_network'] == social_network and _['nickname'] == nickname:
-                return _
-
-    @staticmethod
-    async def delete_user_request_by_nickname_and_social(user_id: int, social_network: str, nickname: str) -> None:
-        requests = await UserMonitoringRequests.get_user_requests(user_id)
-        for _ in requests:
-            if _['social_network'] == social_network and _['nickname'] == nickname:
-                return requests.remove(_)
-        await redis_connector.save_data(key=str(user_id), data=requests)
-
-
-
-    @staticmethod
-    async def get_user_requests_count(user_id: int) -> int:
-        return len(await UserMonitoringRequests.get_user_requests(user_id))

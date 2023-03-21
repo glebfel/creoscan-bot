@@ -1,4 +1,10 @@
+import validators
+
+from pyrogram.types import (
+    Message,
+)
 from common.models import ThirdPartyAPISource
+from exceptions import WrongInputException
 from helpers.base import BaseHelper
 from helpers.clients import TikTokRapidAPIClient, InstagramRapidAPIClient
 from helpers.instagram import (InstagramSelectedUserStoryParserHelper,
@@ -49,3 +55,9 @@ def get_monitoring_handler(module: BotModule, social_network: str, media_type: s
                 return InstagramRapidAPIClient().get_instagram_user_stories
     else:
         return TikTokRapidAPIClient().get_tiktok_user_videos_by_username
+
+
+def extract_username_from_link(message: Message) -> str:
+    if not (link := message.text) or not validators.url(message.text):
+        raise WrongInputException(message.text or message.media)
+    return '@' + link.strip('/').split('/')[-1].replace('@', '')
