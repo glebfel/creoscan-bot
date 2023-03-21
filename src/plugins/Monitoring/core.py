@@ -35,6 +35,9 @@ class MonitoringModule(BotModule):
     my_monitoring_command: str = field(init=False)
     my_monitoring_introduction_text_active: str = field(init=False)
     my_monitoring_introduction_text_not_active: str = field(init=False)
+    pause_monitoring_text: str = field(init=False)
+    delete_confirmation_text: str = field(init=False)
+    delete_text: str = field(init=False)
     edit_my_monitoring_text: str = field(init=False)
     create_monitoring_button: str = field(init=False)
 
@@ -141,12 +144,17 @@ async def handle_my_monitoring(client: Client, update: CallbackQuery | Message) 
               InlineKeyboardButton(module.create_monitoring_button, callback_data=module.create_monitoring_button)]]))
 
 
-@Client.on_callback_query(filters.regex('^account_'))
+@Client.on_callback_query(filters.regex('^account_') | filters.regex('^RETURN_TO_EDIT_'))
 async def edit_my_monitoring_request(client: Client, callback_query: CallbackQuery) -> None:
-    nickname = callback_query.data.split('_')[1]
-    social_network = callback_query.data.split('_')[2]
+    if 'RETURN_TO_EDIT' in callback_query.data:
+        nickname = callback_query.data.split('_')[3]
+        social_network = callback_query.data.split('_')[4]
+    else:
+        nickname = callback_query.data.split('_')[1]
+        social_network = callback_query.data.split('_')[2]
     monitoring = await UserMonitoringRequests.get_user_request_by_nickname_and_social(callback_query.from_user.id,
-                                                                                      nickname=nickname, social_network=social_network)
+                                                                                      nickname=nickname,
+                                                                                      social_network=social_network)
 
     text = module.edit_my_monitoring_text.format(
         nickname=monitoring['nickname'],
@@ -156,9 +164,78 @@ async def edit_my_monitoring_request(client: Client, callback_query: CallbackQue
         start_date=monitoring['start_date'], )
 
     # generate keyboard
-    markup = InlineKeyboardMarkup([[InlineKeyboardButton(text='Удалить', callback_data='DELETE'),
-                                    InlineKeyboardButton(text='Остановить', callback_data='PAUSE')],
-                                   [InlineKeyboardButton(text='<< Вернуться к мониторингам', callback_data='RETURN_TO_MONITORING')]])
+    markup = InlineKeyboardMarkup(
+        [[InlineKeyboardButton(text='Удалить', callback_data=f'DELETE_{nickname}_{social_network}'),
+          InlineKeyboardButton(text='Остановить', callback_data=f'PAUSE_{nickname}_{social_network}')],
+         [InlineKeyboardButton(text='<< Вернуться к мониторингам', callback_data='RETURN_TO_MONITORING')]])
+
+    await callback_query.message.edit_text(text=text, reply_markup=markup)
+
+
+@Client.on_callback_query(filters.regex('^PAUSE'))
+async def pause_my_monitoring_request(client: Client, callback_query: CallbackQuery) -> None:
+    nickname = callback_query.data.split('_')[1]
+    social_network = callback_query.data.split('_')[2]
+    monitoring = await UserMonitoringRequests.get_user_request_by_nickname_and_social(callback_query.from_user.id,
+                                                                                      nickname=nickname,
+                                                                                      social_network=social_network)
+
+    text = module.pause_monitoring_text.format(
+        nickname=monitoring['nickname'], )
+
+    # pause monitoring in redis
+    await UserMonitoringRequests.save_user_request(callback_query.from_user.id, active=False)
+
+    # pause monitoring job
+    scheduler.pause_job(
+        job_id=f'monitoring-{social_network}-{nickname}'
+    )
+
+    # generate keyboard
+    markup = InlineKeyboardMarkup(
+        [[InlineKeyboardButton(text='<< Вернуться к мониторингам', callback_data='RETURN_TO_MONITORING')]])
+
+    await callback_query.message.edit_text(text=text, reply_markup=markup)
+
+
+@Client.on_callback_query(filters.regex('^DELETE'))
+async def delete_confirmation_my_monitoring_request(client: Client, callback_query: CallbackQuery) -> None:
+    nickname = callback_query.data.split('_')[1]
+    social_network = callback_query.data.split('_')[2]
+
+    text = module.delete_confirmation_text.format(
+        nickname=nickname, )
+
+    # generate keyboard
+    markup = InlineKeyboardMarkup(
+        [[InlineKeyboardButton(text='Нет, забудь', callback_data=f'RETURN_TO_EDIT')],
+         [InlineKeyboardButton(text='Да, я уверен', callback_data=f'CONFIRM_DELETE_{nickname}_{social_network}')],
+         [InlineKeyboardButton(text='<< Вернуться к редактированию', callback_data=f'RETURN_TO_EDIT_{nickname}_{social_network}')]])
+
+    await callback_query.message.edit_text(text=text, reply_markup=markup)
+
+
+@Client.on_callback_query(filters.regex('^CONFIRM_DELETE'))
+async def delete_my_monitoring_request(client: Client, callback_query: CallbackQuery) -> None:
+    nickname = callback_query.data.split('_')[1]
+    social_network = callback_query.data.split('_')[2]
+
+    # pause monitoring in redis
+    await UserMonitoringRequests.delete_user_request_by_nickname_and_social(callback_query.from_user.id,
+                                                                            nickname=nickname,
+                                                                            social_network=social_network)
+
+    # delete monitoring job
+    scheduler.remove_job(
+        job_id=f'monitoring-{social_network}-{nickname}'
+    )
+
+    text = module.delete_text.format(
+        nickname=nickname, )
+
+    # generate keyboard
+    markup = InlineKeyboardMarkup(
+        [[InlineKeyboardButton(text='<< Вернуться к мониторингам', callback_data='RETURN_TO_MONITORING')]])
 
     await callback_query.message.edit_text(text=text, reply_markup=markup)
 
@@ -379,6 +456,16 @@ class UserMonitoringRequests:
         for _ in requests:
             if _['social_network'] == social_network and _['nickname'] == nickname:
                 return _
+
+    @staticmethod
+    async def delete_user_request_by_nickname_and_social(user_id: int, social_network: str, nickname: str) -> None:
+        requests = await UserMonitoringRequests.get_user_requests(user_id)
+        for _ in requests:
+            if _['social_network'] == social_network and _['nickname'] == nickname:
+                return requests.remove(_)
+        await redis_connector.save_data(key=str(user_id), data=requests)
+
+
 
     @staticmethod
     async def get_user_requests_count(user_id: int) -> int:
