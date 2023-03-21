@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -15,6 +16,8 @@ from addons.Telemetry import (
 from common.models import ThirdPartyAPIMediaType
 from db.connector import database_connector
 from helpers.base import api_adapter_module, BaseHelper
+from helpers.state import redis_connector
+from helpers.utils import get_monitoring_handler
 from models import BotModule
 from utils import chunks
 
@@ -145,3 +148,65 @@ async def get_tiktok_media(
                     reply_markup=module.keyboard,
                     caption=text
                 )
+
+
+async def start_monitoring(
+        client: Client,
+        message: Message,
+        module: BotModule,
+        social_network: str,
+        nickname: str,
+        media_type: str,
+) -> None:
+    custom_error_message: str = getattr(module, 'error_text', api_adapter_module.unhandled_error_text)
+    try:
+        while True:
+            # get last item
+            data = await get_monitoring_handler(module=module, social_network=social_network, media_type=media_type)(nickname, limit=1)
+            data = data.items[0]
+
+            # compare last item from storage
+            last_data_id = await redis_connector.get_user_data(
+                key='last_updated_item',
+                user_id=message.from_user.id,
+            )
+
+            if last_data_id != data.media_id and last_data_id is not None:
+                match data.media_type:
+                    case ThirdPartyAPIMediaType.photo:
+                        await message.reply_photo(
+                            caption=module.result_text.format(media_type=media_type, nickname=nickname),
+                            photo=data.media_url,
+                        )
+                    case ThirdPartyAPIMediaType.video:
+                        await message.reply_video(
+                            caption=module.result_text.format(media_type=media_type, nickname=nickname),
+                            video=data.media_url,
+                        )
+                    case ThirdPartyAPIMediaType.audio:
+                        await message.reply_audio(
+                            caption=module.result_text.format(media_type=media_type, nickname=nickname),
+                            audio=data.media_url,
+                        )
+
+            # save last item id to storage
+            await redis_connector.save_user_data(
+                key='last_updated_item',
+                data=data.media_id,
+                user_id=message.from_user.id,
+            )
+
+            # sleep till next update
+            await asyncio.sleep(settings.SEND_MONITORING_INTERVAL)
+
+    except exceptions.AccountIsPrivate:
+        await message.reply(text=api_adapter_module.error_text_account_private, reply_to_message_id=message.id)
+    except exceptions.AccountNotExist:
+        await message.reply(text=api_adapter_module.error_text_account_not_found, reply_to_message_id=message.id)
+    except exceptions.EmptyResultsException:
+        await message.reply(text=custom_error_message, reply_to_message_id=message.id)
+    except exceptions.ThirdPartyApiException:
+        await message.reply(module.unhandled_error_text)
+        raise  # unhanled error, let top-level decorator to know about it
+    except exceptions.WrongInputException:
+        await message.reply(text=module.wrong_input_text, reply_to_message_id=message.id)
