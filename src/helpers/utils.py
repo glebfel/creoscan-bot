@@ -48,7 +48,7 @@ def get_monitoring_handler(module: BotModule, social_network: str, media_type: s
             case module.stories_button:
                 return InstagramRapidAPIClient().get_instagram_user_stories
     else:
-        return TikTokRapidAPIClient().get_tiktok_user_video_by_username
+        return TikTokRapidAPIClient().get_tiktok_user_videos_by_username
 
 
 def extract_username_from_link_instagram(link: str) -> str:
