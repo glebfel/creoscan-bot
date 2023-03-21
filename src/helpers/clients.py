@@ -161,7 +161,7 @@ class InstagramRapidAPIClient(BaseThirdPartyAPIClient):
             url=settings.INSTAGRAM_RAPIDAPI_URL,
         )
         items = []
-        for ind, post in enumerate(raw_data):
+        for ind, post in enumerate(raw_data['items']):
             if ind == limit:
                 break
             match post['media_type']:
@@ -199,7 +199,7 @@ class InstagramRapidAPIClient(BaseThirdPartyAPIClient):
             url=settings.INSTAGRAM_RAPIDAPI_URL,
         )
         items = []
-        for ind, reel in enumerate(raw_data):
+        for ind, reel in enumerate(raw_data['items']):
             if ind == limit:
                 break
             match reel['media_type']:
