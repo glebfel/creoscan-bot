@@ -15,6 +15,7 @@ from common.decorators import (
     inform_user_decorator, handle_common_exceptions_decorator,
 )
 from common.filters import conversation_filter
+from common.models import ThirdPartyAPISource
 from exceptions import WrongInputException
 from helpers.state import redis_connector
 from models import BotModule
@@ -23,8 +24,9 @@ from plugins.base import callback as base_callback, get_modules_buttons
 
 @dataclass
 class MonitoringModule(BotModule):
-    tiktok_link_input_text: str = field(init=False)
-    instagram_link_input_text: str = field(init=False)
+    instagram_media_type_choice_text: str = field(init=False)
+    subscribe_confirmation_text: str = field(init=False)
+    subscribe_text: str = field(init=False)
 
     return_button: str = field(init=False)
     my_monitoring_button: str = field(init=False)
@@ -69,14 +71,56 @@ class MonitoringModule(BotModule):
 module = MonitoringModule('monitoring')
 
 
-@Client.on_message(
-    filters.regex(rf'^{module.button}$') | filters.command(module.command) | filters.regex(module.return_button))
+@Client.on_message(filters.regex(rf'^{module.button}$') |
+                   filters.command(module.command) | filters.regex(module.return_button))
 @inform_user_decorator
 @handle_trottling_decorator
 @handle_common_exceptions_decorator
 @handle_paid_requests_trottling_decorator
 async def callback(client: Client, update: CallbackQuery | Message) -> None:
     await base_callback(client, module, update)
+
+
+@Client.on_callback_query(filters.regex('^SUBSCRIBE'))
+@handle_common_exceptions_decorator
+async def handle_subscribe(client: Client, callback_query: CallbackQuery) -> None:
+    # extract user data from redis
+    social_network = await redis_connector.get_user_data(key='social_network',
+                                                         user_id=callback_query.from_user.id)
+    nickname = await redis_connector.get_user_data(key='nickname',
+                                                   user_id=callback_query.from_user.id)
+
+    text = module.subscribe_text.format(
+        social_network=social_network.capitalize(),
+        nickname=nickname,)
+
+    await callback_query.message.reply_text(text=text)
+
+
+@Client.on_callback_query(filters.regex('^CONFIRM_SUBSCRIBE'))
+@handle_common_exceptions_decorator
+async def handle_subscribe_confirmation(client: Client, callback_query: CallbackQuery) -> None:
+    # extract user data from redis
+    user_selected_media_type = await redis_connector.get_user_data(key='selected_media_type',
+                                                                   user_id=callback_query.from_user.id)
+    social_network = await redis_connector.get_user_data(key='social_network',
+                                                         user_id=callback_query.from_user.id)
+    nickname = await redis_connector.get_user_data(key='nickname',
+                                                   user_id=callback_query.from_user.id)
+
+    media_list_text = ''
+    for type in user_selected_media_type:
+        media_list_text += f'◾ {type}\n'
+
+    text = module.subscribe_confirmation_text.format(
+        social_network=social_network.capitalize(),
+        nickname=nickname,
+        media_list=media_list_text)
+
+    await callback_query.message.reply_text(text=text,
+                                            reply_markup=InlineKeyboardMarkup(
+                                                [[InlineKeyboardButton(module.subscribe_button,
+                                                                       callback_data='SUBSCRIBE')]]))
 
 
 @Client.on_callback_query(filters.regex('^SELECT'))
@@ -96,44 +140,46 @@ async def choose_media_type(client: Client, callback_query: CallbackQuery) -> No
         media_types_selected.append(changed_media_type)
 
     # save media type to redis storage
-    await _save_media_type(
-        media_type=media_types_selected,
+    await redis_connector.save_user_data(
+        key='selected_media_type',
+        data=media_types_selected,
         user_id=callback_query.from_user.id,
     )
 
     await callback_query.message.edit_reply_markup(
         get_keyboard_select_media_type(
             selected=media_types_selected,
+            social_network=ThirdPartyAPISource.instagram
         ))
 
 
-@Client.on_callback_query(filters.regex(module.subscribe_button))
-@handle_common_exceptions_decorator
-async def handle_subscribe(client: Client, callback_query: CallbackQuery) -> None:
-    pass
-
-
-def get_keyboard_select_media_type(selected: list = None) -> InlineKeyboardMarkup:
+def get_keyboard_select_media_type(social_network: ThirdPartyAPISource, selected: list = None) -> InlineKeyboardMarkup:
     selected = selected if selected else []
-    media_type_buttons: list = [
-        [
-            InlineKeyboardButton(
-                media_type,  # actually max for Tg button is 64
-                callback_data='PASS',  # button press will do nothing
-            ),
-            InlineKeyboardButton(
-                module.button_selected if str(
-                    media_type
-                ) in selected else module.button_unselected,
-                callback_data=f'SELECT{str(media_type)}',
-            ),
-        ] for media_type in (module.stories_button, module.posts_button, module.reels_button)
-    ]
 
-    return InlineKeyboardMarkup([
-        *media_type_buttons,
-        [InlineKeyboardButton(module.subscribe_button)],
-    ])
+    if social_network == ThirdPartyAPISource.instagram:
+        media_type_buttons = [
+            [
+                InlineKeyboardButton(
+                    media_type,  # actually max for Tg button is 64
+                    callback_data='PASS',  # button press will do nothing
+                ),
+                InlineKeyboardButton(
+                    module.button_selected if str(
+                        media_type
+                    ) in selected else module.button_unselected,
+                    callback_data=f'SELECT{str(media_type)}',
+                ),
+            ] for media_type in (module.stories_button, module.posts_button, module.reels_button)
+        ]
+        markup = [
+            *media_type_buttons,
+            [InlineKeyboardButton(module.subscribe_button, callback_data='CONFIRM_SUBSCRIBE')],
+        ]
+    else:
+        markup = [
+            [InlineKeyboardButton(module.subscribe_button, callback_data='SUBSCRIBE')],
+        ]
+    return InlineKeyboardMarkup(markup)
 
 
 @Client.on_message(filters.text & conversation_filter(module.name))
@@ -141,45 +187,39 @@ def get_keyboard_select_media_type(selected: list = None) -> InlineKeyboardMarku
 @handle_common_exceptions_decorator
 @inform_user_decorator
 async def handle_user_link_input(client: Client, message: Message) -> None:
+    nickname = extract_username_from_link(message)
+
+    await redis_connector.save_user_data(
+        key='nickname',
+        data=nickname,
+        user_id=message.from_user.id)
+
     if 'tiktok' in message.text.lower():
-        await message.reply_text(
-            text=module.tiktok_link_input_text.format(nickname=extract_username_from_link(message)),
-            reply_markup=get_keyboard_select_media_type(),
+        await redis_connector.save_user_data(
+            key='social_network',
+            data=ThirdPartyAPISource.tiktok.value,
+            user_id=message.from_user.id,
         )
-    else:
+
         await message.reply_text(
-            text=module.instagram_link_input_text.format(nickname=extract_username_from_link(message)),
-            reply_markup=get_keyboard_select_media_type())
+            text=module.subscribe_confirmation_text.format(nickname=nickname,
+                                                           social_network=ThirdPartyAPISource.tiktok.value.capitalize(),
+                                                           media_list=f'◾ Видео'),
+            reply_markup=get_keyboard_select_media_type(social_network=ThirdPartyAPISource.tiktok))
+
+    else:
+        await redis_connector.save_user_data(
+            key='social_network',
+            data=ThirdPartyAPISource.instagram.value,
+            user_id=message.from_user.id,
+        )
+
+        await message.reply_text(
+            text=module.instagram_media_type_choice_text.format(nickname=nickname),
+            reply_markup=get_keyboard_select_media_type(social_network=ThirdPartyAPISource.instagram))
 
 
 def extract_username_from_link(message: Message) -> str:
     if not (link := message.text) or not validators.url(message.text):
         raise WrongInputException(message.text or message.media)
     return '@' + link.split('/')[-1].replace('@', '')
-
-
-# for saving media type to redis storage
-async def _get_media_type(user_id: int) -> list[str]:
-    media_type_from_storage: list = await redis_connector.get_user_data(
-        key=user_id,
-        user_id=user_id,
-    ) or await redis_connector.get_user_data(  # deprecated: fallback
-        key='hashtags_cloud',
-        user_id=user_id,
-    ) or []
-    return media_type_from_storage
-
-
-async def _save_media_type(media_type: list, user_id: int) -> None:
-    await redis_connector.save_user_data(
-        key=user_id,
-        data=media_type,
-        user_id=user_id,
-    )
-
-
-async def _delete_media_type(user_id: int) -> None:
-    await redis_connector.delete_user_data(
-        key=user_id,
-        user_id=user_id,
-    )
