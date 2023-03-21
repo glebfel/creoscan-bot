@@ -30,6 +30,7 @@ class MonitoringModule(BotModule):
     instagram_media_type_choice_text: str = field(init=False)
     subscribe_confirmation_text: str = field(init=False)
     subscribe_text: str = field(init=False)
+    monitoring_requests_exceed_error_message: str = field(init=False)
 
     return_button: str = field(init=False)
     my_monitoring_button: str = field(init=False)
@@ -110,6 +111,10 @@ module = MonitoringModule('monitoring')
 @handle_common_exceptions_decorator
 @handle_paid_requests_trottling_decorator
 async def callback(client: Client, update: CallbackQuery | Message) -> None:
+    user_requests = await UserMonitoringRequests.get_user_requests(update.from_user.id)
+    module.introduction_text = module.introduction_text.format(
+        available_count=settings.FREE_MONITORING_REQUESR_COUNT - len(user_requests),
+        max_count=settings.FREE_MONITORING_REQUESR_COUNT)
     await base_callback(client, module, update)
 
 
@@ -223,6 +228,16 @@ def get_keyboard_select_media_type(social_network: ThirdPartyAPISource, selected
 @handle_common_exceptions_decorator
 @inform_user_decorator
 async def handle_user_link_input(client: Client, message: Message) -> None:
+    # check if user is already subscribed
+    user_requests = await UserMonitoringRequests.get_user_requests(message.from_user.id)
+    if len(user_requests) > settings.FREE_MONITORING_REQUESR_COUNT:
+        text = module.monitoring_requests_exceed_error_message.format(
+            available_count=settings.FREE_MONITORING_REQUESR_COUNT - len(user_requests),
+            max_count=settings.FREE_MONITORING_REQUESR_COUNT)
+        await message.reply_text(text=text,
+                                 reply_markup=ReplyKeyboardMarkup([[module.return_button]], resize_keyboard=True))
+        return
+
     nickname = extract_username_from_link(message)
 
     if 'tiktok' in message.text.lower():
@@ -271,7 +286,10 @@ class UserMonitoringRequests:
 
     @staticmethod
     async def get_last_user_request(user_id: int) -> list[dict]:
-        return (await redis_connector.get_data(key=str(user_id)))[-1]
+        requests = await redis_connector.get_data(key=str(user_id))
+        if requests:
+            return requests[-1]
+        return []
 
     @staticmethod
     async def get_user_requests(user_id: int) -> list[dict]:
