@@ -1,6 +1,6 @@
-import datetime
 from dataclasses import dataclass, field
 
+import validators
 from pyrogram import Client, filters
 from pyrogram.types import (
     CallbackQuery,
@@ -10,15 +10,13 @@ from pyrogram.types import (
     Message,
 )
 
-import settings
 from addons.Trottling import handle_trottling_decorator, handle_paid_requests_trottling_decorator
 from common.decorators import (
     inform_user_decorator, handle_common_exceptions_decorator,
 )
 from common.filters import conversation_filter
+from exceptions import WrongInputException
 from helpers.state import redis_connector
-from helpers.utils import get_helper_class_from_link_tiktok
-from jobs import scheduler, get_tiktok_media
 from models import BotModule
 from plugins.base import callback as base_callback, get_modules_buttons
 
@@ -71,7 +69,8 @@ class MonitoringModule(BotModule):
 module = MonitoringModule('monitoring')
 
 
-@Client.on_message(filters.regex(rf'^{module.button}$') | filters.command(module.command) | filters.regex(module.return_button))
+@Client.on_message(
+    filters.regex(rf'^{module.button}$') | filters.command(module.command) | filters.regex(module.return_button))
 @inform_user_decorator
 @handle_trottling_decorator
 @handle_common_exceptions_decorator
@@ -110,7 +109,7 @@ async def choose_media_type(client: Client, callback_query: CallbackQuery) -> No
 
 @Client.on_callback_query(filters.regex(module.subscribe_button))
 @handle_common_exceptions_decorator
-async def choose_media_type(client: Client, callback_query: CallbackQuery) -> None:
+async def handle_subscribe(client: Client, callback_query: CallbackQuery) -> None:
     pass
 
 
@@ -144,13 +143,19 @@ def get_keyboard_select_media_type(selected: list = None) -> InlineKeyboardMarku
 async def handle_user_link_input(client: Client, message: Message) -> None:
     if 'tiktok' in message.text.lower():
         await message.reply_text(
-            text=module.tiktok_link_input_text,
+            text=module.tiktok_link_input_text.format(nickname=extract_username_from_link(message)),
             reply_markup=get_keyboard_select_media_type(),
         )
     else:
         await message.reply_text(
-            text=module.instagram_link_input_text,
+            text=module.instagram_link_input_text.format(nickname=extract_username_from_link(message)),
             reply_markup=get_keyboard_select_media_type())
+
+
+def extract_username_from_link(message: Message) -> str:
+    if not (link := message.text) or not validators.url(message.text):
+        raise WrongInputException(message.text or message.media)
+    return '@' + link.split('/')[-1].replace('@', '')
 
 
 # for saving media type to redis storage
