@@ -124,6 +124,7 @@ PLUGINS = [
     'Introduction.core',
     'Instagram.core',
     'TikTok.core',
+    'Monitoring.core',
     'Support.core',
     'Common.core',
 ]

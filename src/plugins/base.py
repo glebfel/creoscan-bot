@@ -1,11 +1,9 @@
 import importlib
-from typing import Optional
 
 from pyrogram import Client
 from pyrogram.types import (
     CallbackQuery,
     Message,
-    ReplyKeyboardMarkup,
 )
 
 import settings
