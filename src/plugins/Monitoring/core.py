@@ -117,12 +117,7 @@ async def callback(client: Client, update: CallbackQuery | Message) -> None:
 @handle_common_exceptions_decorator
 async def handle_subscribe(client: Client, callback_query: CallbackQuery) -> None:
     # extract user data from redis
-    social_network = await redis_connector.get_user_data(key='social_network',
-                                                         user_id=callback_query.from_user.id)
-    nickname = await redis_connector.get_user_data(key='nickname',
-                                                   user_id=callback_query.from_user.id)
-    media_type = await redis_connector.get_user_data(key='selected_media_type',
-                                                     user_id=callback_query.from_user.id)
+    user_data = await UserMonitoringRequests.get_last_user_request(callback_query.from_user.id)
 
     start_time = datetime.datetime.now()
     if current_jobs := scheduler.get_jobs():
@@ -135,24 +130,24 @@ async def handle_subscribe(client: Client, callback_query: CallbackQuery) -> Non
 
     scheduler.add_job(
         start_monitoring,
-        id=f'monitoring-{social_network}-{nickname}',
+        id=f'monitoring-{user_data["social_network"]}-{user_data["nickname"]}',
         trigger='date',
-        name=f'Monitoring for {nickname}',
+        name=f'Monitoring for {user_data["nickname"]}',
         misfire_grace_time=None,  # run job even if it's time is overdue
         kwargs={
             'client': client,
             'module': module,
             'message': callback_query.message,
-            'social_network': social_network,
-            'nickname': nickname,
-            'media_type': media_type
+            'social_network': user_data['social_network'],
+            'nickname': user_data['nickname'],
+            'media_type': user_data['selected_media_type']
         },
         run_date=start_time,
     )
 
     text = module.subscribe_text.format(
-        social_network=social_network.capitalize(),
-        nickname=nickname, )
+        social_network=user_data['social_network'].capitalize(),
+        nickname=user_data['nickname'], )
 
     await callback_query.message.reply_text(text=text, reply_markup=module.result_keyboard)
 
@@ -161,17 +156,12 @@ async def handle_subscribe(client: Client, callback_query: CallbackQuery) -> Non
 @handle_common_exceptions_decorator
 async def handle_subscribe_confirmation(client: Client, callback_query: CallbackQuery) -> None:
     # extract user data from redis
-    user_selected_media_type = await redis_connector.get_user_data(key='selected_media_type',
-                                                                   user_id=callback_query.from_user.id)
-    social_network = await redis_connector.get_user_data(key='social_network',
-                                                         user_id=callback_query.from_user.id)
-    nickname = await redis_connector.get_user_data(key='nickname',
-                                                   user_id=callback_query.from_user.id)
+    user_data = await UserMonitoringRequests.get_last_user_request(callback_query.from_user.id)
 
     text = module.subscribe_confirmation_text.format(
-        social_network=social_network.capitalize(),
-        nickname=nickname,
-        media_list=f'◾ {user_selected_media_type}\n')
+        social_network=user_data['social_network'].capitalize(),
+        nickname=user_data['nickname'],
+        media_list=f'◾ {user_data["selected_media_type"]}\n')
 
     await callback_query.message.reply_text(text=text,
                                             reply_markup=InlineKeyboardMarkup(
@@ -187,18 +177,16 @@ async def choose_media_type(client: Client, callback_query: CallbackQuery) -> No
     same, and changes entity (e.g. emoji) that represents selected hashtag.
     """
     # stashed hashtags contains only selected by user
-    media_types_selected: str = callback_query.data.replace('SELECT', '')
+    selected_media_type: str = callback_query.data.replace('SELECT', '')
 
     # save media type to redis storage
-    await redis_connector.save_user_data(
-        key='selected_media_type',
-        data=media_types_selected,
+    await UserMonitoringRequests.save_user_request(
         user_id=callback_query.from_user.id,
-    )
+        selected_media_type=selected_media_type)
 
     await callback_query.message.edit_reply_markup(
         get_keyboard_select_media_type(
-            selected=media_types_selected,
+            selected=selected_media_type,
             social_network=ThirdPartyAPISource.instagram
         ))
 
@@ -237,17 +225,8 @@ def get_keyboard_select_media_type(social_network: ThirdPartyAPISource, selected
 async def handle_user_link_input(client: Client, message: Message) -> None:
     nickname = extract_username_from_link(message)
 
-    await redis_connector.save_user_data(
-        key='nickname',
-        data=nickname,
-        user_id=message.from_user.id)
-
     if 'tiktok' in message.text.lower():
-        await redis_connector.save_user_data(
-            key='social_network',
-            data=ThirdPartyAPISource.tiktok.value,
-            user_id=message.from_user.id,
-        )
+        social_network = ThirdPartyAPISource.tiktok.value
 
         await message.reply_text(
             text=module.subscribe_confirmation_text.format(nickname=nickname,
@@ -256,18 +235,48 @@ async def handle_user_link_input(client: Client, message: Message) -> None:
             reply_markup=get_keyboard_select_media_type(social_network=ThirdPartyAPISource.tiktok))
 
     else:
-        await redis_connector.save_user_data(
-            key='social_network',
-            data=ThirdPartyAPISource.instagram.value,
-            user_id=message.from_user.id,
-        )
-
+        social_network = ThirdPartyAPISource.instagram.value
         await message.reply_text(
             text=module.instagram_media_type_choice_text.format(nickname=nickname),
             reply_markup=get_keyboard_select_media_type(social_network=ThirdPartyAPISource.instagram))
+
+    await UserMonitoringRequests.save_user_request(
+        user_id=message.from_user.id,
+        new=True,
+        nickname=nickname,
+        social_network=social_network, )
 
 
 def extract_username_from_link(message: Message) -> str:
     if not (link := message.text) or not validators.url(message.text):
         raise WrongInputException(message.text or message.media)
     return '@' + link.strip('/').split('/')[-1].replace('@', '')
+
+
+class UserMonitoringRequests:
+
+    @staticmethod
+    async def save_user_request(user_id: int, new=False, **kwargs) -> None:
+        if new:
+            request_list = await redis_connector.get_data(key=str(user_id))
+            if not request_list:
+                await redis_connector.save_data(key=str(user_id), data=[kwargs])
+            else:
+                request_list.append(kwargs)
+                await redis_connector.save_data(key=str(user_id), data=request_list)
+        else:
+            request_list = await redis_connector.get_data(key=str(user_id))
+            request_list[-1].update(kwargs)
+            await redis_connector.save_data(key=str(user_id), data=request_list)
+
+    @staticmethod
+    async def get_last_user_request(user_id: int) -> list[dict]:
+        return (await redis_connector.get_data(key=str(user_id)))[-1]
+
+    @staticmethod
+    async def get_user_requests(user_id: int) -> list[dict]:
+        return await redis_connector.get_data(key=str(user_id))
+
+    @staticmethod
+    async def get_user_requests_count(user_id: int) -> int:
+        return len(await UserMonitoringRequests.get_user_requests(user_id))
