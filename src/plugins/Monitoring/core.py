@@ -19,7 +19,8 @@ from common.filters import conversation_filter
 from common.models import ThirdPartyAPISource
 from helpers.state import redis_connector
 from helpers.utils import extract_username_from_link
-from jobs import scheduler, start_monitoring
+from jobs import scheduler
+from plugins.Monitoring.jobs import start_monitoring
 from models import BotModule
 from plugins.Monitoring.utils import UserMonitoringRequestsDBConnector, UserMonitoringRequest
 from plugins.base import get_modules_buttons
@@ -308,7 +309,7 @@ async def handle_subscribe(client: Client, callback_query: CallbackQuery) -> Non
     scheduler.add_job(
         start_monitoring,
         trigger='cron',
-        second=settings.SEND_MONITORING_INTERVAL,
+        minute=settings.SEND_MONITORING_INTERVAL_MINUTES,
         id=f'monitoring-{user_data.user_id}-{user_data.social_network}-{user_data.nickname}',
         name=f'Monitoring for {user_data.nickname} by {user_data.user_id}',
         misfire_grace_time=None,
