@@ -196,7 +196,6 @@ async def pause_my_monitoring_request(client: Client, callback_query: CallbackQu
                               active=False))
 
     # pause monitoring job
-    a = scheduler.get_jobs()
     scheduler.pause_job(
         job_id=f'monitoring-{callback_query.from_user.id}-{social_network}-{nickname}'
     )
