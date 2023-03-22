@@ -65,7 +65,7 @@ class UserMonitoringRequestsDBConnector:
         await redis_connector.save_data(key=str(user_id), data=[asdict(_) for _ in requests])
 
 
-def get_monitoring_handler(module: BotModule, social_network: str, media_type: str) -> callable:
+def get_monitoring_media_handler_func(module: BotModule, social_network: str, media_type: str) -> callable:
     if social_network == ThirdPartyAPISource.instagram.value:
         match media_type:
             case module.reels_button:

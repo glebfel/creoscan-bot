@@ -9,7 +9,7 @@ from helpers.base import api_adapter_module
 from helpers.state import redis_connector
 from jobs import scheduler
 from models import BotModule
-from plugins.Monitoring.utils import get_monitoring_handler
+from plugins.Monitoring.utils import get_monitoring_media_handler_func
 
 log = logging.getLogger(__name__)
 
@@ -25,7 +25,7 @@ async def start_monitoring(
     custom_error_message: str = getattr(module, 'error_text', api_adapter_module.unhandled_error_text)
     try:
         # get last item
-        data = await get_monitoring_handler(module=module, social_network=social_network, media_type=media_type)(
+        data = await get_monitoring_media_handler_func(module=module, social_network=social_network, media_type=media_type)(
             nickname, limit=1)
         data = data.items[0]
 
