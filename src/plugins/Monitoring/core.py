@@ -17,6 +17,7 @@ from common.decorators import (
 )
 from common.filters import conversation_filter
 from common.models import ThirdPartyAPISource
+from helpers.state import redis_connector
 from helpers.utils import extract_username_from_link
 from jobs import scheduler, start_monitoring
 from models import BotModule
@@ -190,8 +191,9 @@ async def pause_my_monitoring_request(client: Client, callback_query: CallbackQu
         nickname=monitoring.nickname, )
 
     # pause monitoring in redis
-    await UserMonitoringRequestsDBConnector.save_user_monitoring(UserMonitoringRequest(user_id=callback_query.from_user.id,
-                                                                                       active=False))
+    await UserMonitoringRequestsDBConnector.save_user_monitoring(
+        UserMonitoringRequest(user_id=callback_query.from_user.id,
+                              active=False))
 
     # pause monitoring job
     scheduler.pause_job(
@@ -258,11 +260,26 @@ async def delete_my_monitoring_request(client: Client, callback_query: CallbackQ
 @handle_trottling_decorator
 @handle_common_exceptions_decorator
 async def callback(client: Client, update: CallbackQuery | Message) -> None:
+    # response with modules's introduction text
     user_requests = await UserMonitoringRequestsDBConnector.get_all_user_monitorings(update.from_user.id)
-    module.introduction_text = module.introduction_text.format(
-        available_count=settings.FREE_MONITORING_REQUESR_COUNT - len(user_requests),
-        max_count=settings.FREE_MONITORING_REQUESR_COUNT)
-    await base_callback(client, module, update)
+
+    # store identifier in which conversation user is
+    await redis_connector.save_user_data(
+        key='conversation',
+        data=module.name,
+        user_id=update.from_user.id,
+    )
+
+    if isinstance(update, CallbackQuery):
+        update = update.message
+
+    await update.reply(
+        text=module.introduction_text.format(
+            available_count=settings.FREE_MONITORING_REQUESR_COUNT - len(user_requests),
+            max_count=settings.FREE_MONITORING_REQUESR_COUNT),
+        reply_markup=module.keyboard if hasattr(module, 'keyboard') else None,
+        disable_web_page_preview=True,
+    )
 
 
 @Client.on_callback_query(filters.regex('^SUBSCRIBE'))
