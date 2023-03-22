@@ -17,10 +17,10 @@ from common.decorators import (
 )
 from common.filters import conversation_filter
 from common.models import ThirdPartyAPISource
-from helpers.state import UserMonitoringRequests
 from helpers.utils import extract_username_from_link
 from jobs import scheduler, start_monitoring
 from models import BotModule
+from plugins.Monitoring.utils import UserMonitoringRequests
 from plugins.base import callback as base_callback, get_modules_buttons
 
 
@@ -366,7 +366,7 @@ def get_keyboard_select_media_type(social_network: ThirdPartyAPISource, selected
     return InlineKeyboardMarkup(markup)
 
 
-@Client.on_message(filters.text & conversation_filter(module.name))
+@Client.on_message(filters.text)
 @handle_trottling_decorator
 @handle_common_exceptions_decorator
 @inform_user_decorator
