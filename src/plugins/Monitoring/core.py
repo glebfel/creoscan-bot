@@ -143,14 +143,17 @@ async def handle_my_monitoring(client: Client, update: CallbackQuery | Message) 
               InlineKeyboardButton(module.create_monitoring_button, callback_data=module.create_monitoring_button)]]))
 
 
-@Client.on_callback_query(filters.regex('^account_') | filters.regex('^RETURN_TO_EDIT_'))
+@Client.on_callback_query(filters.regex('^account') | filters.regex('^RETURN_TO_EDIT'))
 async def edit_my_monitoring_request(client: Client, callback_query: CallbackQuery) -> None:
     if 'RETURN_TO_EDIT' in callback_query.data:
-        nickname = callback_query.data.split('_')[3]
-        social_network = callback_query.data.split('_')[4]
+        user_data = callback_query.data.replace('RETURN_TO_EDIT_', '').split('_')
+        social_network = user_data[-1]
+        nickname = '_'.join([_ for _ in user_data if _ != social_network])
     else:
-        nickname = callback_query.data.split('_')[1]
-        social_network = callback_query.data.split('_')[2]
+        user_data = callback_query.data.replace('account_', '').split('_')
+        social_network = user_data[-1]
+        nickname = '_'.join([_ for _ in user_data if _ != social_network])
+
     monitoring = await UserMonitoringRequestsDBConnector.get_user_monitoring_by_nickname_and_social(
         callback_query.from_user.id,
         nickname=nickname,
@@ -174,8 +177,10 @@ async def edit_my_monitoring_request(client: Client, callback_query: CallbackQue
 
 @Client.on_callback_query(filters.regex('^PAUSE'))
 async def pause_my_monitoring_request(client: Client, callback_query: CallbackQuery) -> None:
-    nickname = callback_query.data.split('_')[1]
-    social_network = callback_query.data.split('_')[2]
+    user_data = callback_query.data.replace('PAUSE_', '').split('_')
+    social_network = user_data[-1]
+    nickname = '_'.join([_ for _ in user_data if _ != social_network])
+
     monitoring = await UserMonitoringRequestsDBConnector.get_user_monitoring_by_nickname_and_social(
         callback_query.from_user.id,
         nickname=nickname,
@@ -202,8 +207,9 @@ async def pause_my_monitoring_request(client: Client, callback_query: CallbackQu
 
 @Client.on_callback_query(filters.regex('^DELETE'))
 async def delete_confirmation_my_monitoring_request(client: Client, callback_query: CallbackQuery) -> None:
-    nickname = callback_query.data.split('_')[1]
-    social_network = callback_query.data.split('_')[2]
+    user_data = callback_query.data.replace('DELETE_', '').split('_')
+    social_network = user_data[-1]
+    nickname = '_'.join([_ for _ in user_data if _ != social_network])
 
     text = module.delete_confirmation_text.format(
         nickname=nickname, )
@@ -220,8 +226,9 @@ async def delete_confirmation_my_monitoring_request(client: Client, callback_que
 
 @Client.on_callback_query(filters.regex('^CONFIRM_DELETE'))
 async def delete_my_monitoring_request(client: Client, callback_query: CallbackQuery) -> None:
-    nickname = callback_query.data.split('_')[1]
-    social_network = callback_query.data.split('_')[2]
+    user_data = callback_query.data.replace('CONFIRM_DELETE_', '').split('_')
+    social_network = user_data[-1]
+    nickname = '_'.join([_ for _ in user_data if _ != social_network])
 
     # pause monitoring in redis
     await UserMonitoringRequestsDBConnector.delete_user_monitoring_by_nickname_and_social(callback_query.from_user.id,
