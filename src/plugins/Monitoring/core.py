@@ -190,7 +190,7 @@ async def pause_my_monitoring_request(client: Client, callback_query: CallbackQu
 
     # pause monitoring job
     scheduler.pause_job(
-        job_id=f'monitoring-{social_network}-{nickname}'
+        job_id=f'monitoring-{callback_query.from_user}-{social_network}-{nickname}'
     )
 
     # generate keyboard
@@ -230,7 +230,7 @@ async def delete_my_monitoring_request(client: Client, callback_query: CallbackQ
 
     # delete monitoring job
     scheduler.remove_job(
-        job_id=f'monitoring-{social_network}-{nickname}'
+        job_id=f'monitoring-{callback_query.from_user}-{social_network}-{nickname}'
     )
 
     text = module.delete_text.format(
@@ -283,10 +283,11 @@ async def handle_subscribe(client: Client, callback_query: CallbackQuery) -> Non
 
     scheduler.add_job(
         start_monitoring,
-        id=f'monitoring-{user_data.social_network}-{user_data.nickname}',
-        trigger='date',
-        name=f'Monitoring for {user_data.nickname}',
-        misfire_grace_time=None,  # run job even if it's time is overdue
+        trigger='cron',
+        second=settings.SEND_MONITORING_INTERVAL,
+        id=f'monitoring-{user_data.user_id}-{user_data.social_network}-{user_data.nickname}',
+        name=f'Monitoring for {user_data.nickname} by {user_data.user_id}',
+        misfire_grace_time=None,
         kwargs={
             'client': client,
             'module': module,
@@ -295,7 +296,6 @@ async def handle_subscribe(client: Client, callback_query: CallbackQuery) -> Non
             'nickname': user_data.nickname,
             'media_type': user_data.selected_media_type
         },
-        run_date=start_time,
     )
 
     text = module.subscribe_text.format(

@@ -160,44 +160,40 @@ async def start_monitoring(
 ) -> None:
     custom_error_message: str = getattr(module, 'error_text', api_adapter_module.unhandled_error_text)
     try:
-        while True:
-            # get last item
-            data = await get_monitoring_handler(module=module, social_network=social_network, media_type=media_type)(nickname, limit=1)
-            data = data.items[0]
+        # get last item
+        data = await get_monitoring_handler(module=module, social_network=social_network, media_type=media_type)(nickname, limit=1)
+        data = data.items[0]
 
-            # compare last item from storage
-            last_data_id = await redis_connector.get_user_data(
-                key='last_updated_item',
-                user_id=message.from_user.id,
-            )
+        # compare last item from storage
+        last_data_id = await redis_connector.get_user_data(
+            key='last_updated_item',
+            user_id=message.from_user.id,
+        )
 
-            if last_data_id != data.media_id and last_data_id is not None:
-                match data.media_type:
-                    case ThirdPartyAPIMediaType.photo:
-                        await message.reply_photo(
-                            caption=module.result_text.format(media_type=media_type, nickname=nickname),
-                            photo=data.media_url,
-                        )
-                    case ThirdPartyAPIMediaType.video:
-                        await message.reply_video(
-                            caption=module.result_text.format(media_type=media_type, nickname=nickname),
-                            video=data.media_url,
-                        )
-                    case ThirdPartyAPIMediaType.audio:
-                        await message.reply_audio(
-                            caption=module.result_text.format(media_type=media_type, nickname=nickname),
-                            audio=data.media_url,
-                        )
+        if last_data_id != data.media_id and last_data_id is not None:
+            match data.media_type:
+                case ThirdPartyAPIMediaType.photo:
+                    await message.reply_photo(
+                        caption=module.result_text.format(media_type=media_type, nickname=nickname),
+                        photo=data.media_url,
+                    )
+                case ThirdPartyAPIMediaType.video:
+                    await message.reply_video(
+                        caption=module.result_text.format(media_type=media_type, nickname=nickname),
+                        video=data.media_url,
+                    )
+                case ThirdPartyAPIMediaType.audio:
+                    await message.reply_audio(
+                        caption=module.result_text.format(media_type=media_type, nickname=nickname),
+                        audio=data.media_url,
+                    )
 
-            # save last item id to storage
-            await redis_connector.save_user_data(
-                key='last_updated_item',
-                data=data.media_id,
-                user_id=message.from_user.id,
-            )
-
-            # sleep till next update
-            await asyncio.sleep(settings.SEND_MONITORING_INTERVAL)
+        # save last item id to storage
+        await redis_connector.save_user_data(
+            key='last_updated_item',
+            data=data.media_id,
+            user_id=message.from_user.id,
+        )
 
     except exceptions.AccountIsPrivate:
         await message.reply(text=api_adapter_module.error_text_account_private, reply_to_message_id=message.id)
