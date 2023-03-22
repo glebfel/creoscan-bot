@@ -57,5 +57,5 @@ class UserMonitoringRequestsDBConnector:
         requests = await UserMonitoringRequestsDBConnector.get_all_user_monitorings(user_id)
         for _ in requests:
             if _.social_network == social_network and _.nickname == nickname:
-                return requests.remove(_)
+                requests.remove(_)
         await redis_connector.save_data(key=str(user_id), data=[asdict(_) for _ in requests])
