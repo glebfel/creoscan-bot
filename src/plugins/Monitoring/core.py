@@ -22,7 +22,7 @@ from helpers.utils import extract_username_from_link
 from jobs import scheduler, start_monitoring
 from models import BotModule
 from plugins.Monitoring.utils import UserMonitoringRequestsDBConnector, UserMonitoringRequest
-from plugins.base import callback as base_callback, get_modules_buttons
+from plugins.base import get_modules_buttons
 
 
 @dataclass
@@ -169,8 +169,8 @@ async def edit_my_monitoring_request(client: Client, callback_query: CallbackQue
 
     # generate keyboard
     markup = InlineKeyboardMarkup(
-        [[InlineKeyboardButton(text='Удалить', callback_data=f'DELETE_{nickname}_{social_network}'),
-          InlineKeyboardButton(text='Остановить', callback_data=f'PAUSE_{nickname}_{social_network}')],
+        [[InlineKeyboardButton(text='Остановить', callback_data=f'PAUSE_{nickname}_{social_network}'),
+          InlineKeyboardButton(text='Удалить', callback_data=f'DELETE_{nickname}_{social_network}')],
          [InlineKeyboardButton(text='<< Вернуться к мониторингам', callback_data='RETURN_TO_MONITORING')]])
 
     await callback_query.message.edit_text(text=text, reply_markup=markup)
@@ -196,8 +196,9 @@ async def pause_my_monitoring_request(client: Client, callback_query: CallbackQu
                               active=False))
 
     # pause monitoring job
+    a = scheduler.get_jobs()
     scheduler.pause_job(
-        job_id=f'monitoring-{callback_query.from_user}-{social_network}-{nickname}'
+        job_id=f'monitoring-{callback_query.from_user.id}-{social_network}-{nickname}'
     )
 
     # generate keyboard
@@ -232,14 +233,14 @@ async def delete_my_monitoring_request(client: Client, callback_query: CallbackQ
     social_network = user_data[-1]
     nickname = '_'.join([_ for _ in user_data if _ != social_network])
 
-    # pause monitoring in redis
+    # delete monitoring in redis
     await UserMonitoringRequestsDBConnector.delete_user_monitoring_by_nickname_and_social(callback_query.from_user.id,
                                                                                           nickname=nickname,
                                                                                           social_network=social_network)
 
     # delete monitoring job
     scheduler.remove_job(
-        job_id=f'monitoring-{callback_query.from_user}-{social_network}-{nickname}'
+        job_id=f'monitoring-{callback_query.from_user.id}-{social_network}-{nickname}'
     )
 
     text = module.delete_text.format(
