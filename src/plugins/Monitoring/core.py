@@ -125,8 +125,8 @@ async def handle_my_monitoring(client: Client, update: CallbackQuery | Message) 
 
     if len(user_requests) > 0:
         text = module.my_monitoring_active_introduction_text.format(
-            available_count=settings.FREE_MONITORING_REQUESR_COUNT - len(user_requests),
-            max_count=settings.FREE_MONITORING_REQUESR_COUNT)
+            available_count=settings.FREE_MONITORING_REQUESTS_COUNT - len(user_requests),
+            max_count=settings.FREE_MONITORING_REQUESTS_COUNT)
 
         # generate keyboard from subscriptions
         markup = []
@@ -137,8 +137,8 @@ async def handle_my_monitoring(client: Client, update: CallbackQuery | Message) 
         await update.reply_text(text=text, reply_markup=InlineKeyboardMarkup(markup))
     else:
         text = module.my_monitoring_not_active_introduction_text.format(
-            available_count=settings.FREE_MONITORING_REQUESR_COUNT - len(user_requests),
-            max_count=settings.FREE_MONITORING_REQUESR_COUNT)
+            available_count=settings.FREE_MONITORING_REQUESTS_COUNT - len(user_requests),
+            max_count=settings.FREE_MONITORING_REQUESTS_COUNT)
 
         await update.reply_text(text=text, reply_markup=InlineKeyboardMarkup(
             [[InlineKeyboardButton(module.create_monitoring_button, callback_data=module.create_monitoring_button)],
@@ -276,8 +276,8 @@ async def callback(client: Client, update: CallbackQuery | Message) -> None:
 
     await update.reply(
         text=module.introduction_text.format(
-            available_count=settings.FREE_MONITORING_REQUESR_COUNT - len(user_requests),
-            max_count=settings.FREE_MONITORING_REQUESR_COUNT),
+            available_count=settings.FREE_MONITORING_REQUESTS_COUNT - len(user_requests),
+            max_count=settings.FREE_MONITORING_REQUESTS_COUNT),
         reply_markup=module.keyboard if hasattr(module, 'keyboard') else None,
         disable_web_page_preview=True,
     )
@@ -404,10 +404,10 @@ def get_keyboard_select_media_type(social_network: ThirdPartyAPISource, selected
 async def handle_user_link_input(client: Client, message: Message) -> None:
     # check if user is already subscribed
     user_requests = await UserMonitoringRequestsDBConnector.get_all_user_monitorings(message.from_user.id)
-    if len(user_requests) >= settings.FREE_MONITORING_REQUESR_COUNT:
+    if len(user_requests) >= settings.FREE_MONITORING_REQUESTS_COUNT:
         text = module.monitoring_requests_exceed_error_text.format(
-            available_count=settings.FREE_MONITORING_REQUESR_COUNT - len(user_requests),
-            max_count=settings.FREE_MONITORING_REQUESR_COUNT)
+            available_count=settings.FREE_MONITORING_REQUESTS_COUNT - len(user_requests),
+            max_count=settings.FREE_MONITORING_REQUESTS_COUNT)
         await message.reply_text(text=text,
                                  reply_markup=ReplyKeyboardMarkup([[module.return_button]], resize_keyboard=True))
         return
