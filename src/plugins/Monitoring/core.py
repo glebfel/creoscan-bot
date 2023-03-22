@@ -20,7 +20,7 @@ from common.models import ThirdPartyAPISource
 from helpers.utils import extract_username_from_link
 from jobs import scheduler, start_monitoring
 from models import BotModule
-from plugins.Monitoring.utils import UserMonitoringRequests
+from plugins.Monitoring.utils import UserMonitoringRequestsDBConnector, UserMonitoringRequest
 from plugins.base import callback as base_callback, get_modules_buttons
 
 
@@ -117,7 +117,7 @@ module = MonitoringModule('monitoring')
                    filters.command(module.my_monitoring_command))
 @handle_common_exceptions_decorator
 async def handle_my_monitoring(client: Client, update: CallbackQuery | Message) -> None:
-    user_requests = await UserMonitoringRequests.get_user_requests(update.from_user.id)
+    user_requests = await UserMonitoringRequestsDBConnector.get_user_requests(user_id=update.from_user.id)
     if isinstance(update, CallbackQuery):
         update = update.message
 
@@ -129,8 +129,8 @@ async def handle_my_monitoring(client: Client, update: CallbackQuery | Message) 
         # generate keyboard from subscriptions
         markup = []
         for sub in user_requests:
-            markup.append([InlineKeyboardButton(text=f'({sub["social_network"].capitalize()}) {sub["nickname"]}',
-                                                callback_data=f'account_{sub["nickname"]}_{sub["social_network"]}')])
+            markup.append([InlineKeyboardButton(text=f'({sub.social_network.capitalize()}) {sub.nickname}',
+                                                callback_data=f'account_{sub.nickname}_{sub.social_network}')])
 
         await update.reply_text(text=text, reply_markup=InlineKeyboardMarkup(markup))
     else:
@@ -151,16 +151,17 @@ async def edit_my_monitoring_request(client: Client, callback_query: CallbackQue
     else:
         nickname = callback_query.data.split('_')[1]
         social_network = callback_query.data.split('_')[2]
-    monitoring = await UserMonitoringRequests.get_user_request_by_nickname_and_social(callback_query.from_user.id,
-                                                                                      nickname=nickname,
-                                                                                      social_network=social_network)
+    monitoring = await UserMonitoringRequestsDBConnector.get_user_request_by_nickname_and_social(
+        callback_query.from_user.id,
+        nickname=nickname,
+        social_network=social_network)
 
     text = module.edit_my_monitoring_text.format(
-        nickname=monitoring['nickname'],
+        nickname=monitoring.nickname,
         social_network=social_network.capitalize(),
-        media_type=monitoring['selected_media_type'],
-        active='активен' if monitoring['active'] else 'не активен',
-        start_date=monitoring['start_date'], )
+        media_type=monitoring.selected_media_type,
+        active='активен' if monitoring.active else 'не активен',
+        start_date=monitoring.start_date, )
 
     # generate keyboard
     markup = InlineKeyboardMarkup(
@@ -175,15 +176,17 @@ async def edit_my_monitoring_request(client: Client, callback_query: CallbackQue
 async def pause_my_monitoring_request(client: Client, callback_query: CallbackQuery) -> None:
     nickname = callback_query.data.split('_')[1]
     social_network = callback_query.data.split('_')[2]
-    monitoring = await UserMonitoringRequests.get_user_request_by_nickname_and_social(callback_query.from_user.id,
-                                                                                      nickname=nickname,
-                                                                                      social_network=social_network)
+    monitoring = await UserMonitoringRequestsDBConnector.get_user_request_by_nickname_and_social(
+        callback_query.from_user.id,
+        nickname=nickname,
+        social_network=social_network)
 
     text = module.pause_monitoring_text.format(
-        nickname=monitoring['nickname'], )
+        nickname=monitoring.nickname, )
 
     # pause monitoring in redis
-    await UserMonitoringRequests.save_user_request(callback_query.from_user.id, active=False)
+    await UserMonitoringRequestsDBConnector.save_user_request(UserMonitoringRequest(user_id=callback_query.from_user.id,
+                                                                                    active=False))
 
     # pause monitoring job
     scheduler.pause_job(
@@ -221,9 +224,9 @@ async def delete_my_monitoring_request(client: Client, callback_query: CallbackQ
     social_network = callback_query.data.split('_')[2]
 
     # pause monitoring in redis
-    await UserMonitoringRequests.delete_user_request_by_nickname_and_social(callback_query.from_user.id,
-                                                                            nickname=nickname,
-                                                                            social_network=social_network)
+    await UserMonitoringRequestsDBConnector.delete_user_request_by_nickname_and_social(callback_query.from_user.id,
+                                                                                       nickname=nickname,
+                                                                                       social_network=social_network)
 
     # delete monitoring job
     scheduler.remove_job(
@@ -248,7 +251,7 @@ async def delete_my_monitoring_request(client: Client, callback_query: CallbackQ
 @handle_trottling_decorator
 @handle_common_exceptions_decorator
 async def callback(client: Client, update: CallbackQuery | Message) -> None:
-    user_requests = await UserMonitoringRequests.get_user_requests(update.from_user.id)
+    user_requests = await UserMonitoringRequestsDBConnector.get_user_requests(update.from_user.id)
     module.introduction_text = module.introduction_text.format(
         available_count=settings.FREE_MONITORING_REQUESR_COUNT - len(user_requests),
         max_count=settings.FREE_MONITORING_REQUESR_COUNT)
@@ -259,13 +262,15 @@ async def callback(client: Client, update: CallbackQuery | Message) -> None:
 @handle_common_exceptions_decorator
 async def handle_subscribe(client: Client, callback_query: CallbackQuery) -> None:
     # extract user data from redis
-    user_data = await UserMonitoringRequests.get_last_user_request(callback_query.from_user.id)
+    user_data = await UserMonitoringRequestsDBConnector.get_last_user_request(callback_query.from_user.id)
 
     # made user monitoring request active
-    await UserMonitoringRequests.save_user_request(
-        user_id=callback_query.from_user.id,
-        start_date=datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-        active=True)
+    await UserMonitoringRequestsDBConnector.save_user_request(
+        UserMonitoringRequest(
+            user_id=callback_query.from_user.id,
+            start_date=datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            active=True
+        ))
 
     start_time = datetime.datetime.now()
     if current_jobs := scheduler.get_jobs():
@@ -278,24 +283,24 @@ async def handle_subscribe(client: Client, callback_query: CallbackQuery) -> Non
 
     scheduler.add_job(
         start_monitoring,
-        id=f'monitoring-{user_data["social_network"]}-{user_data["nickname"]}',
+        id=f'monitoring-{user_data.social_network}-{user_data.nickname}',
         trigger='date',
-        name=f'Monitoring for {user_data["nickname"]}',
+        name=f'Monitoring for {user_data.nickname}',
         misfire_grace_time=None,  # run job even if it's time is overdue
         kwargs={
             'client': client,
             'module': module,
             'message': callback_query.message,
-            'social_network': user_data['social_network'],
-            'nickname': user_data['nickname'],
-            'media_type': user_data['selected_media_type']
+            'social_network': user_data.social_network,
+            'nickname': user_data.nickname,
+            'media_type': user_data.selected_media_type
         },
         run_date=start_time,
     )
 
     text = module.subscribe_text.format(
-        social_network=user_data['social_network'].capitalize(),
-        nickname=user_data['nickname'], )
+        social_network=user_data.social_network.capitalize(),
+        nickname=user_data.nickname, )
 
     await callback_query.message.reply_text(text=text, reply_markup=module.result_keyboard)
 
@@ -304,12 +309,12 @@ async def handle_subscribe(client: Client, callback_query: CallbackQuery) -> Non
 @handle_common_exceptions_decorator
 async def handle_subscribe_confirmation(client: Client, callback_query: CallbackQuery) -> None:
     # extract user data from redis
-    user_data = await UserMonitoringRequests.get_last_user_request(callback_query.from_user.id)
+    user_data = await UserMonitoringRequestsDBConnector.get_last_user_request(user_id=callback_query.from_user.id)
 
     text = module.subscribe_confirmation_text.format(
-        social_network=user_data['social_network'].capitalize(),
-        nickname=user_data['nickname'],
-        media_list=f'◾ {user_data["selected_media_type"]}\n')
+        social_network=user_data.social_network.capitalize(),
+        nickname=user_data.nickname,
+        media_list=f'◾ {user_data.selected_media_type}\n')
 
     await callback_query.message.reply_text(text=text,
                                             reply_markup=InlineKeyboardMarkup(
@@ -328,14 +333,15 @@ async def choose_media_type(client: Client, callback_query: CallbackQuery) -> No
     selected_media_type: str = callback_query.data.replace('SELECT', '')
 
     # save media type to redis storage
-    await UserMonitoringRequests.save_user_request(
-        user_id=callback_query.from_user.id,
-        selected_media_type=selected_media_type)
+    await UserMonitoringRequestsDBConnector.save_user_request(
+        UserMonitoringRequest(
+            user_id=callback_query.from_user.id,
+            selected_media_type=selected_media_type))
 
     await callback_query.message.edit_reply_markup(
         get_keyboard_select_media_type(
             selected=selected_media_type,
-            social_network=ThirdPartyAPISource.instagram
+            social_network=ThirdPartyAPISource.instagram.value
         ))
 
 
@@ -366,13 +372,13 @@ def get_keyboard_select_media_type(social_network: ThirdPartyAPISource, selected
     return InlineKeyboardMarkup(markup)
 
 
-@Client.on_message(filters.text)
+@Client.on_message(filters.text & conversation_filter(module.name))
 @handle_trottling_decorator
 @handle_common_exceptions_decorator
 @inform_user_decorator
 async def handle_user_link_input(client: Client, message: Message) -> None:
     # check if user is already subscribed
-    user_requests = await UserMonitoringRequests.get_user_requests(message.from_user.id)
+    user_requests = await UserMonitoringRequestsDBConnector.get_user_requests(message.from_user.id)
     if len(user_requests) >= settings.FREE_MONITORING_REQUESR_COUNT:
         text = module.monitoring_requests_exceed_error_text.format(
             available_count=settings.FREE_MONITORING_REQUESR_COUNT - len(user_requests),
@@ -392,12 +398,12 @@ async def handle_user_link_input(client: Client, message: Message) -> None:
                                                            media_list=f'◾ Видео'),
             reply_markup=get_keyboard_select_media_type(social_network=ThirdPartyAPISource.tiktok))
 
-        await UserMonitoringRequests.save_user_request(
-            user_id=message.from_user.id,
-            new=True,
-            nickname=nickname,
-            social_network=social_network,
-            selected_media_type='Видео')
+        await UserMonitoringRequestsDBConnector.save_user_request(
+            UserMonitoringRequest(user_id=message.from_user.id,
+                                  nickname=nickname,
+                                  selected_media_type='Видео',
+                                  social_network=social_network),
+            new=True)
 
     else:
         social_network = ThirdPartyAPISource.instagram.value
@@ -405,8 +411,8 @@ async def handle_user_link_input(client: Client, message: Message) -> None:
             text=module.instagram_media_type_choice_text.format(nickname=nickname),
             reply_markup=get_keyboard_select_media_type(social_network=ThirdPartyAPISource.instagram))
 
-        await UserMonitoringRequests.save_user_request(
-            user_id=message.from_user.id,
-            new=True,
-            nickname=nickname,
-            social_network=social_network, )
+        await UserMonitoringRequestsDBConnector.save_user_request(
+            UserMonitoringRequest(user_id=message.from_user.id,
+                                  nickname=nickname,
+                                  social_network=social_network),
+            new=True)
