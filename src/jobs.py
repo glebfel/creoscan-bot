@@ -176,16 +176,13 @@ async def start_monitoring(
                     await message.reply_photo(
                         caption=module.result_text.format(media_type=media_type, nickname=nickname),
                         photo=data.media_url,
+                        reply_markup=module.result_keyboard,
                     )
                 case ThirdPartyAPIMediaType.video:
                     await message.reply_video(
                         caption=module.result_text.format(media_type=media_type, nickname=nickname),
                         video=data.media_url,
-                    )
-                case ThirdPartyAPIMediaType.audio:
-                    await message.reply_audio(
-                        caption=module.result_text.format(media_type=media_type, nickname=nickname),
-                        audio=data.media_url,
+                        reply_markup=module.result_keyboard,
                     )
 
         # save last item id to storage

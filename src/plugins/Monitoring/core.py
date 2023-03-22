@@ -140,8 +140,8 @@ async def handle_my_monitoring(client: Client, update: CallbackQuery | Message) 
             max_count=settings.FREE_MONITORING_REQUESR_COUNT)
 
         await update.reply_text(text=text, reply_markup=InlineKeyboardMarkup(
-            [[InlineKeyboardButton(module.return_button, callback_data=module.return_button),
-              InlineKeyboardButton(module.create_monitoring_button, callback_data=module.create_monitoring_button)]]))
+            [[InlineKeyboardButton(module.create_monitoring_button, callback_data=module.create_monitoring_button)],
+             [InlineKeyboardButton(module.return_button, callback_data=module.return_button)]]))
 
 
 @Client.on_callback_query(filters.regex('^account') | filters.regex('^RETURN_TO_EDIT'))
@@ -219,7 +219,7 @@ async def delete_confirmation_my_monitoring_request(client: Client, callback_que
 
     # generate keyboard
     markup = InlineKeyboardMarkup(
-        [[InlineKeyboardButton(text='Нет, забудь', callback_data=f'RETURN_TO_EDIT')],
+        [[InlineKeyboardButton(text='Нет, забудь', callback_data=f'RETURN_TO_EDIT_{nickname}_{social_network}')],
          [InlineKeyboardButton(text='Да, я уверен', callback_data=f'CONFIRM_DELETE_{nickname}_{social_network}')],
          [InlineKeyboardButton(text='<< Вернуться к редактированию',
                                callback_data=f'RETURN_TO_EDIT_{nickname}_{social_network}')]])
@@ -327,7 +327,7 @@ async def handle_subscribe(client: Client, callback_query: CallbackQuery) -> Non
         social_network=user_data.social_network.capitalize(),
         nickname=user_data.nickname, )
 
-    await callback_query.message.reply_text(text=text, reply_markup=module.result_keyboard)
+    await callback_query.message.reply_text(text=text)
 
 
 @Client.on_callback_query(filters.regex('^CONFIRM_SUBSCRIBE'))
