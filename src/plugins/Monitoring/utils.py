@@ -19,7 +19,7 @@ class UserMonitoringRequestsDBConnector:
     """
 
     @staticmethod
-    async def save_user_request(user_request: UserMonitoringRequest, new=False) -> None:
+    async def save_user_monitoring(user_request: UserMonitoringRequest, new=False) -> None:
         if new:
             request_list = await redis_connector.get_data(key=str(user_request.user_id))
             if not request_list:
@@ -33,28 +33,28 @@ class UserMonitoringRequestsDBConnector:
             await redis_connector.save_data(key=str(user_request.user_id), data=request_list)
 
     @staticmethod
-    async def get_last_user_request(user_id: int) -> UserMonitoringRequest:
+    async def get_last_user_monitoring(user_id: int) -> UserMonitoringRequest:
         requests = await redis_connector.get_data(key=str(user_id))
         if requests:
             return UserMonitoringRequest(**requests[-1])
 
     @staticmethod
-    async def get_user_requests(user_id: int) -> list[UserMonitoringRequest]:
+    async def get_all_user_monitorings(user_id: int) -> list[UserMonitoringRequest]:
         requests = await redis_connector.get_data(key=str(user_id))
         if not requests:
             return []
         return [UserMonitoringRequest(**_) for _ in requests]
 
     @staticmethod
-    async def get_user_request_by_nickname_and_social(user_id: int, social_network: str, nickname: str) -> UserMonitoringRequest | None:
-        requests = await UserMonitoringRequestsDBConnector.get_user_requests(user_id)
+    async def get_user_monitoring_by_nickname_and_social(user_id: int, social_network: str, nickname: str) -> UserMonitoringRequest | None:
+        requests = await UserMonitoringRequestsDBConnector.get_all_user_monitorings(user_id)
         for _ in requests:
             if _.social_network == social_network and _.nickname == nickname:
                 return _
 
     @staticmethod
-    async def delete_user_request_by_nickname_and_social(user_id: int, social_network: str, nickname: str) -> None:
-        requests = await UserMonitoringRequestsDBConnector.get_user_requests(user_id)
+    async def delete_user_monitoring_by_nickname_and_social(user_id: int, social_network: str, nickname: str) -> None:
+        requests = await UserMonitoringRequestsDBConnector.get_all_user_monitorings(user_id)
         for _ in requests:
             if _.social_network == social_network and _.nickname == nickname:
                 return requests.remove(_)
