@@ -64,6 +64,22 @@ class UserMonitoringRequestsDBConnector:
                 requests.remove(_)
         await redis_connector.save_data(key=str(user_id), data=[asdict(_) for _ in requests])
 
+    @staticmethod
+    async def get_last_updated_data_id(user_id: int):
+        last_data_id = await redis_connector.get_user_data(
+            key='last_updated_item',
+            user_id=user_id,
+        )
+        return last_data_id
+
+    @staticmethod
+    async def save_last_updated_data_id(data_id: int, user_id: int):
+        await redis_connector.save_user_data(
+            key='last_updated_item',
+            data=data_id,
+            user_id=user_id,
+        )
+
 
 def get_monitoring_media_handler_func(module: BotModule, social_network: str, media_type: str) -> callable:
     if social_network == ThirdPartyAPISource.instagram.value:
