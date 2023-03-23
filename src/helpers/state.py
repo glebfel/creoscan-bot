@@ -8,7 +8,6 @@ from typing import Any, Optional
 import settings
 from common.models import AutoNameEnum
 
-
 log = logging.getLogger(__name__)
 
 
@@ -21,7 +20,7 @@ class StashKeys(AutoNameEnum):
     user_paid_requests = enum.auto()
 
 
-class RedisConnector():
+class RedisConnector:
     _connection = None
     _skippable_keys = [
         'conversation',
@@ -58,7 +57,7 @@ class RedisConnector():
         if isinstance(key, enum.Enum):
             key = key.value
         await (await self.connection).set(key, json.dumps(
-            asdict(data) if is_dataclass(data) else data))
+            asdict(data) if is_dataclass(data) else data, default=str))
 
     # shortcuts for per-user data
     async def get_user_data(self, key: str, user_id: int = 0) -> Any:

@@ -1,3 +1,9 @@
+import validators
+from pyrogram.types import (
+    Message,
+)
+
+from exceptions import WrongInputException
 from helpers.base import BaseHelper
 from helpers.instagram import (InstagramSelectedUserStoryParserHelper,
                                InstagramUserStoriesParserHelper,
@@ -35,10 +41,7 @@ def get_helper_class_from_link_tiktok(text: str) -> BaseHelper:
         return TikTokUnknownMediaTypeParserHelper
 
 
-def extract_username_from_link_instagram(link: str) -> str:
-    # in reels links - no username
-    if '/reel/' in link:
-        return link
-    if '/stories/' in link:
-        return link.strip().strip('/').split('/')[-2]
-    return link.strip().strip('/').split('/')[-1]
+def extract_username_from_link(message: Message) -> str:
+    if not (link := message.text) or not validators.url(message.text):
+        raise WrongInputException(message.text or message.media)
+    return '@' + link.strip('/').split('/')[-1].replace('@', '')

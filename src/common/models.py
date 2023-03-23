@@ -107,8 +107,8 @@ class ThirdPartyAPISource(AutoNameEnum):
     """
     Defines available media types from third party APIs.
     """
-    instagram = 'ig'
-    tiktok = 'tt'
+    instagram = 'instagram'
+    tiktok = 'tiktok'
 
 
 @dataclass

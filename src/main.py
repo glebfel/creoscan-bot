@@ -6,7 +6,6 @@ from rich.logging import RichHandler
 
 import settings
 from jobs import scheduler, send_user_stats
-from plugins.Introduction import core
 
 
 def main() -> None:

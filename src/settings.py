@@ -129,6 +129,9 @@ DAY_BORDER_HOUR = 14
 
 ANNOUNCE_PACK_LENGTH = 20
 
+SEND_MONITORING_INTERVAL_MINUTES = 1
+FREE_MONITORING_REQUESTS_COUNT = 1
+
 CONFIG_PATH = 'configs/creoscan.yaml'
 PLUGINS = [
     'Introduction.core',
@@ -136,6 +139,7 @@ PLUGINS = [
     'Announce.core',
     'Instagram.core',
     'TikTok.core',
+    'Monitoring.core',
     'Support.core',
     'Common.core',
 ]
