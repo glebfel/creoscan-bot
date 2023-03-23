@@ -79,6 +79,9 @@ class InstagramRapidAPIClient(BaseThirdPartyAPIClient):
             querystring={'username': username},
             url=settings.INSTAGRAM_RAPIDAPI_URL,
         )
+        # all stories in list is located chronologically (first element is the earliest)
+        # so we need to reverse it
+        raw_data.reverse()
 
         items = []
         for ind, media in enumerate(raw_data):
