@@ -22,7 +22,7 @@ from helpers.utils import extract_username_from_link
 from jobs import scheduler
 from plugins.Monitoring.jobs import start_monitoring
 from models import BotModule
-from plugins.Monitoring.utils import UserMonitoringRequestsDBConnector, UserMonitoringRequest
+from plugins.Monitoring.utils import UserMonitoringRequestsDBConnector, UserMonitoringRequest, seconds_to_cron
 from plugins.base import get_modules_buttons
 
 
@@ -308,8 +308,7 @@ async def handle_subscribe(client: Client, callback_query: CallbackQuery) -> Non
 
     scheduler.add_job(
         start_monitoring,
-        trigger='cron',
-        minute=settings.SEND_MONITORING_INTERVAL_MINUTES,
+        trigger=seconds_to_cron(settings.SEND_MONITORING_INTERVAL_SECONDS),
         id=f'monitoring-{user_data.user_id}-{user_data.social_network}-{user_data.nickname}',
         name=f'Monitoring for {user_data.nickname} by {user_data.user_id}',
         misfire_grace_time=None,

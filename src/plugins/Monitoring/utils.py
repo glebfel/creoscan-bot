@@ -1,4 +1,7 @@
 from dataclasses import dataclass, asdict
+from datetime import timedelta
+
+from apscheduler.triggers.cron import CronTrigger
 
 from common.models import ThirdPartyAPISource
 from helpers.clients import InstagramRapidAPIClient, TikTokRapidAPIClient
@@ -92,3 +95,14 @@ def get_monitoring_media_handler_func(module: BotModule, social_network: str, me
                 return InstagramRapidAPIClient().get_instagram_user_stories
     else:
         return TikTokRapidAPIClient().get_tiktok_user_videos_by_username
+
+
+def seconds_to_cron(interval: int) -> CronTrigger:
+    # Calculate time components
+    minutes, seconds = divmod(interval, 60)
+    hours, minutes = divmod(minutes, 60)
+
+    # Create CronTrigger based on time components
+    return CronTrigger(second='*/{}'.format(seconds) if seconds > 0 else '*',
+                       minute='*/{}'.format(minutes) if minutes > 0 else '*',
+                       hour='*/{}'.format(hours) if hours > 0 else '*',)
