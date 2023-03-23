@@ -19,7 +19,10 @@ from models import BotModule
 from utils import chunks
 
 log = logging.getLogger(__name__)
+
+# init scheduler with redis storage for user jobs
 scheduler = AsyncIOScheduler()
+scheduler.add_jobstore('redis', jobs_key='apscheduler.jobsjobs', run_times_key='apscheduler.run_times')
 scheduler.start()
 
 
