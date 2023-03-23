@@ -40,6 +40,7 @@ def main() -> None:
         next_run_time=start_time,
         name='User stats telemetry',
         seconds=settings.SEND_USER_STATS_INTERVAL_S,  # trigger argument
+        replace_existing=True
     )
 
     # starting the bot
