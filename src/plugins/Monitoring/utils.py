@@ -1,4 +1,7 @@
 from dataclasses import dataclass, asdict
+from datetime import timedelta
+
+from apscheduler.triggers.cron import CronTrigger
 
 from common.models import ThirdPartyAPISource
 from helpers.clients import InstagramRapidAPIClient, TikTokRapidAPIClient
@@ -64,6 +67,22 @@ class UserMonitoringRequestsDBConnector:
                 requests.remove(_)
         await redis_connector.save_data(key=str(user_id), data=[asdict(_) for _ in requests])
 
+    @staticmethod
+    async def get_last_updated_data_id(user_id: int):
+        last_data_id = await redis_connector.get_user_data(
+            key='last_updated_item',
+            user_id=user_id,
+        )
+        return last_data_id
+
+    @staticmethod
+    async def save_last_updated_data_id(data_id: int, user_id: int):
+        await redis_connector.save_user_data(
+            key='last_updated_item',
+            data=data_id,
+            user_id=user_id,
+        )
+
 
 def get_monitoring_media_handler_func(module: BotModule, social_network: str, media_type: str) -> callable:
     if social_network == ThirdPartyAPISource.instagram.value:
@@ -76,3 +95,14 @@ def get_monitoring_media_handler_func(module: BotModule, social_network: str, me
                 return InstagramRapidAPIClient().get_instagram_user_stories
     else:
         return TikTokRapidAPIClient().get_tiktok_user_videos_by_username
+
+
+def seconds_to_cron(interval: int) -> CronTrigger:
+    # Calculate time components
+    minutes, seconds = divmod(interval, 60)
+    hours, minutes = divmod(minutes, 60)
+
+    # Create CronTrigger based on time components
+    return CronTrigger(second='*/{}'.format(seconds) if seconds > 0 else '*',
+                       minute='*/{}'.format(minutes) if minutes > 0 else '*',
+                       hour='*/{}'.format(hours) if hours > 0 else '*',)

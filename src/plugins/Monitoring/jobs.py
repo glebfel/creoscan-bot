@@ -1,21 +1,18 @@
 import logging
 
-from pyrogram import Client
 from pyrogram.types import Message
 
 import exceptions
 from common.models import ThirdPartyAPIMediaType
 from helpers.base import api_adapter_module
-from helpers.state import redis_connector
 from jobs import scheduler
 from models import BotModule
-from plugins.Monitoring.utils import get_monitoring_media_handler_func
+from plugins.Monitoring.utils import get_monitoring_media_handler_func, UserMonitoringRequestsDBConnector
 
 log = logging.getLogger(__name__)
 
 
 async def start_monitoring(
-        client: Client,
         message: Message,
         module: BotModule,
         social_network: str,
@@ -25,15 +22,13 @@ async def start_monitoring(
     custom_error_message: str = getattr(module, 'error_text', api_adapter_module.unhandled_error_text)
     try:
         # get last item
-        data = await get_monitoring_media_handler_func(module=module, social_network=social_network, media_type=media_type)(
+        data = await get_monitoring_media_handler_func(module=module, social_network=social_network,
+                                                       media_type=media_type)(
             nickname, limit=1)
         data = data.items[0]
 
         # compare last item from storage
-        last_data_id = await redis_connector.get_user_data(
-            key='last_updated_item',
-            user_id=message.from_user.id,
-        )
+        last_data_id = await UserMonitoringRequestsDBConnector.get_last_updated_data_id(message.from_user.id)
 
         if last_data_id != data.media_id and last_data_id is not None:
             match data.media_type:
@@ -51,11 +46,7 @@ async def start_monitoring(
                     )
 
         # save last item id to storage
-        await redis_connector.save_user_data(
-            key='last_updated_item',
-            data=data.media_id,
-            user_id=message.from_user.id,
-        )
+        await UserMonitoringRequestsDBConnector.save_last_updated_data_id(data.media_id, message.from_user.id)
 
     except exceptions.AccountIsPrivate:
         await message.reply(text=api_adapter_module.error_text_account_private, reply_to_message_id=message.id)
