@@ -384,9 +384,11 @@ def get_keyboard_select_media_type(social_network: ThirdPartyAPISource, selected
             ] for media_type in (module.stories_button, module.posts_button, module.reels_button)
         ]
         markup = [
-            *media_type_buttons,
-            [InlineKeyboardButton(module.subscribe_button, callback_data='CONFIRM_SUBSCRIBE')],
-        ]
+                *media_type_buttons,
+            ]
+        if selected:
+            markup.append([InlineKeyboardButton(module.subscribe_button, callback_data='CONFIRM_SUBSCRIBE')],)
+
     else:
         markup = [
             [InlineKeyboardButton(module.subscribe_button, callback_data='SUBSCRIBE')],
