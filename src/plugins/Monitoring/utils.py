@@ -66,7 +66,7 @@ class UserMonitoringRequestsDBConnector:
         await UserMonitoringRequestsDBConnector.save_user_monitoring(
             UserMonitoringRequest(
                 user_id=user_id,
-                start_date=datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                start_date=datetime.datetime.now().strftime('%d.%m.%Y'),
                 active=True
             ))
 
@@ -75,7 +75,6 @@ class UserMonitoringRequestsDBConnector:
         await UserMonitoringRequestsDBConnector.save_user_monitoring(
             UserMonitoringRequest(
                 user_id=user_id,
-                start_date=datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                 active=False
             ))
 
