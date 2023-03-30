@@ -19,7 +19,7 @@ from common.filters import conversation_filter
 from common.models import ThirdPartyAPISource
 from helpers.state import redis_connector
 from helpers.utils import extract_username_from_link
-from jobs import scheduler
+from plugins.Monitoring.jobs import monitoring_scheduler
 from plugins.Monitoring.jobs import start_monitoring
 from models import BotModule
 from plugins.Monitoring.utils import UserMonitoringRequestsDBConnector, UserMonitoringRequest, seconds_to_cron
@@ -99,7 +99,7 @@ class MonitoringModule(BotModule):
             extra_buttons.append(buttons[-1])
 
         """
-        Buttons for ReplyKeyboardMarkup shoul be in form of:
+        Buttons for ReplyKeyboardMarkup should be in form of:
         [ (button1, button2), (button3, button4), ... ]
         """
         buttons_in_columns.append(extra_buttons)
@@ -196,7 +196,7 @@ async def restart_my_monitoring_request(client: Client, callback_query: Callback
     await UserMonitoringRequestsDBConnector.activate_last_user_monitoring(callback_query.from_user.id)
 
     # pause monitoring job
-    scheduler.resume_job(
+    monitoring_scheduler.resume_job(
         job_id=f'monitoring-{callback_query.from_user.id}-{social_network}-{nickname}'
     )
 
@@ -224,7 +224,7 @@ async def pause_my_monitoring_request(client: Client, callback_query: CallbackQu
     await UserMonitoringRequestsDBConnector.deactivate_last_user_monitoring(callback_query.from_user.id)
 
     # pause monitoring job
-    scheduler.pause_job(
+    monitoring_scheduler.pause_job(
         job_id=f'monitoring-{callback_query.from_user.id}-{social_network}-{nickname}'
     )
 
@@ -268,7 +268,7 @@ async def delete_my_monitoring_request(client: Client, callback_query: CallbackQ
                                                                                           social_network=social_network)
 
     # delete monitoring job
-    scheduler.remove_job(
+    monitoring_scheduler.remove_job(
         job_id=f'monitoring-{callback_query.from_user.id}-{social_network}-{nickname}'
     )
 
@@ -324,7 +324,7 @@ async def handle_subscribe(client: Client, callback_query: CallbackQuery) -> Non
     await UserMonitoringRequestsDBConnector.activate_last_user_monitoring(callback_query.from_user.id)
 
     start_time = datetime.datetime.now()
-    if current_jobs := scheduler.get_jobs():
+    if current_jobs := monitoring_scheduler.get_jobs():
         channel_stats_jobs = list(filter(lambda j: j.id.startswith('monitoring'), current_jobs))
         if channel_stats_jobs:
             last_job = channel_stats_jobs[-1]
@@ -332,13 +332,14 @@ async def handle_subscribe(client: Client, callback_query: CallbackQuery) -> Non
 
     start_time += datetime.timedelta(seconds=settings.PENDING_DELAY)
 
-    scheduler.add_job(
+    monitoring_scheduler.add_job(
         start_monitoring,
         trigger=seconds_to_cron(settings.SEND_MONITORING_INTERVAL_SECONDS),
         id=f'monitoring-{user_data.user_id}-{user_data.social_network}-{user_data.nickname}',
         name=f'Monitoring for {user_data.nickname} by {user_data.user_id}',
         misfire_grace_time=None,
         kwargs={
+            'clients_list': [client],
             'module': module,
             'message': callback_query.message,
             'social_network': user_data.social_network,

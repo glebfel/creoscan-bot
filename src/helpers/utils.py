@@ -44,4 +44,4 @@ def get_helper_class_from_link_tiktok(text: str) -> BaseHelper:
 def extract_username_from_link(message: Message) -> str:
     if not (link := message.text) or not validators.url(message.text):
         raise WrongInputException(message.text or message.media)
-    return '@' + link.strip('/').split('/')[-1].replace('@', '')
+    return '@' + link.strip('/').split('/')[-1].replace('@', '').split('?')[0]

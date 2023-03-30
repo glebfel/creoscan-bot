@@ -1,15 +1,28 @@
 import logging
 
-from pyrogram.types import Message
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from pyrogram.types import (
+    Message,
+)
 
 import exceptions
+import settings
 from common.models import ThirdPartyAPIMediaType
 from helpers.base import api_adapter_module
-from jobs import scheduler
 from models import BotModule
 from plugins.Monitoring.utils import get_monitoring_media_handler_func, UserMonitoringRequestsDBConnector
 
 log = logging.getLogger(__name__)
+
+monitoring_scheduler = AsyncIOScheduler()
+monitoring_scheduler.add_jobstore(
+    'redis',
+    jobs_key='apscheduler.jobs',
+    run_times_key='apscheduler.run_times',
+    host=settings.REDIS_HOST,
+    port=settings.REDIS_PORT,
+)
+monitoring_scheduler.start()
 
 
 async def start_monitoring(
@@ -50,10 +63,9 @@ async def start_monitoring(
 
     except exceptions.AccountIsPrivate:
         await message.reply(text=api_adapter_module.error_text_account_private, reply_to_message_id=message.id)
-        scheduler.remove_job(job_id=f'monitoring-{message.from_user.id}-{social_network}-{nickname}')
     except exceptions.AccountNotExist:
         await message.reply(text=api_adapter_module.error_text_account_not_found, reply_to_message_id=message.id)
-        scheduler.remove_job(job_id=f'monitoring-{message.from_user.id}-{social_network}-{nickname}')
+        monitoring_scheduler.remove_job(job_id=f'monitoring-{message.from_user.id}-{social_network}-{nickname}')
     except exceptions.EmptyResultsException:
         await message.reply(text=custom_error_message, reply_to_message_id=message.id)
     except exceptions.ThirdPartyApiException:
