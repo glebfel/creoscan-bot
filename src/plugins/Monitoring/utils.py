@@ -1,3 +1,4 @@
+import datetime
 from dataclasses import dataclass, asdict
 from datetime import timedelta
 
@@ -14,9 +15,10 @@ class UserMonitoringRequest:
     user_id: int
     nickname: str = None
     social_network: str = None
-    active: bool = False
+    active: bool = None
     selected_media_type: str = None
     start_date: str = None
+    is_confirmed: bool = None
 
 
 class UserMonitoringRequestsDBConnector:
@@ -27,16 +29,26 @@ class UserMonitoringRequestsDBConnector:
     @staticmethod
     async def save_user_monitoring(user_request: UserMonitoringRequest, new=False) -> None:
         if new:
-            request_list = await redis_connector.get_data(key=str(user_request.user_id))
-            if not request_list:
+            # delete old not confirmed monitorings
+            if monitoring_requests := await redis_connector.get_data(key=str(user_request.user_id)):
+                for i in monitoring_requests:
+                    user_request = UserMonitoringRequest(**i)
+                    if not user_request.is_confirmed:
+                        await UserMonitoringRequestsDBConnector.delete_user_monitoring_by_nickname_and_social(
+                            user_request.user_id,
+                            nickname=user_request.nickname,
+                            social_network=user_request.social_network
+                        )
+
+            if not monitoring_requests:
                 await redis_connector.save_data(key=str(user_request.user_id), data=[asdict(user_request)])
             else:
-                request_list.append(asdict(user_request))
-                await redis_connector.save_data(key=str(user_request.user_id), data=request_list)
+                monitoring_requests.append(asdict(user_request))
+                await redis_connector.save_data(key=str(user_request.user_id), data=monitoring_requests)
         else:
-            request_list = await redis_connector.get_data(key=str(user_request.user_id))
-            request_list[-1].update((k, v) for k, v in asdict(user_request).items() if v is not None)
-            await redis_connector.save_data(key=str(user_request.user_id), data=request_list)
+            monitoring_requests = await redis_connector.get_data(key=str(user_request.user_id))
+            monitoring_requests[-1].update((k, v) for k, v in asdict(user_request).items() if v is not None)
+            await redis_connector.save_data(key=str(user_request.user_id), data=monitoring_requests)
 
     @staticmethod
     async def get_last_user_monitoring(user_id: int) -> UserMonitoringRequest:
@@ -45,11 +57,37 @@ class UserMonitoringRequestsDBConnector:
             return UserMonitoringRequest(**requests[-1])
 
     @staticmethod
+    async def confirm_last_user_monitoring(user_id: int):
+        await UserMonitoringRequestsDBConnector.save_user_monitoring(UserMonitoringRequest(user_id=user_id, is_confirmed=True))
+
+    @staticmethod
+    async def activate_last_user_monitoring(user_id: int):
+        # made user monitoring request active
+        await UserMonitoringRequestsDBConnector.save_user_monitoring(
+            UserMonitoringRequest(
+                user_id=user_id,
+                start_date=datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                active=True
+            ))
+
+    @staticmethod
+    async def deactivate_last_user_monitoring(user_id: int):
+        await UserMonitoringRequestsDBConnector.save_user_monitoring(
+            UserMonitoringRequest(
+                user_id=user_id,
+                start_date=datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                active=False
+            ))
+
+    @staticmethod
     async def get_all_user_monitorings(user_id: int) -> list[UserMonitoringRequest]:
-        requests = await redis_connector.get_data(key=str(user_id))
-        if not requests:
-            return []
-        return [UserMonitoringRequest(**_) for _ in requests]
+        actual_monitorings = []
+        if monitoring_requests := await redis_connector.get_data(key=str(user_id)):
+            for i in monitoring_requests:
+                user_request = UserMonitoringRequest(**i)
+                if user_request.is_confirmed:
+                    actual_monitorings.append(user_request)
+        return actual_monitorings
 
     @staticmethod
     async def get_user_monitoring_by_nickname_and_social(user_id: int, social_network: str,
@@ -105,4 +143,4 @@ def seconds_to_cron(interval: int) -> CronTrigger:
     # Create CronTrigger based on time components
     return CronTrigger(second='*/{}'.format(seconds) if seconds > 0 else '*',
                        minute='*/{}'.format(minutes) if minutes > 0 else '*',
-                       hour='*/{}'.format(hours) if hours > 0 else '*',)
+                       hour='*/{}'.format(hours) if hours > 0 else '*', )

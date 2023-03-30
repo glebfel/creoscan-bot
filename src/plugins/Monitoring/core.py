@@ -37,6 +37,7 @@ class MonitoringModule(BotModule):
     my_monitoring_active_introduction_text: str = field(init=False)
     my_monitoring_not_active_introduction_text: str = field(init=False)
     pause_monitoring_text: str = field(init=False)
+    restart_monitoring_text: str = field(init=False)
     delete_confirmation_text: str = field(init=False)
     delete_text: str = field(init=False)
     edit_my_monitoring_text: str = field(init=False)
@@ -169,11 +170,42 @@ async def edit_my_monitoring_request(client: Client, callback_query: CallbackQue
         start_date=monitoring.start_date, )
 
     # generate keyboard
+    action_button = InlineKeyboardButton(text='Остановить', callback_data=f'PAUSE_{nickname}_{social_network}') \
+        if monitoring.active \
+        else InlineKeyboardButton(text='Запустить', callback_data=f'RESTART_{nickname}_{social_network}')
     markup = InlineKeyboardMarkup(
-        [[InlineKeyboardButton(text='Остановить', callback_data=f'PAUSE_{nickname}_{social_network}'),
+        [[action_button,
           InlineKeyboardButton(text='Удалить', callback_data=f'DELETE_{nickname}_{social_network}')],
          [InlineKeyboardButton(text='<< Вернуться к мониторингам', callback_data='RETURN_TO_MONITORING')]])
 
+    await callback_query.message.edit_text(text=text, reply_markup=markup)
+
+
+@Client.on_callback_query(filters.regex('^RESTART'))
+async def restart_my_monitoring_request(client: Client, callback_query: CallbackQuery) -> None:
+    user_data = callback_query.data.replace('RESTART_', '').split('_')
+    social_network = user_data[-1]
+    nickname = '_'.join([_ for _ in user_data if _ != social_network])
+
+    monitoring = await UserMonitoringRequestsDBConnector.get_user_monitoring_by_nickname_and_social(
+        callback_query.from_user.id,
+        nickname=nickname,
+        social_network=social_network)
+
+    # activate monitoring in redis
+    await UserMonitoringRequestsDBConnector.activate_last_user_monitoring(callback_query.from_user.id)
+
+    # pause monitoring job
+    scheduler.resume_job(
+        job_id=f'monitoring-{callback_query.from_user.id}-{social_network}-{nickname}'
+    )
+
+    # generate keyboard
+    markup = InlineKeyboardMarkup(
+        [[InlineKeyboardButton(text='<< Вернуться к мониторингам', callback_data='RETURN_TO_MONITORING')]])
+
+    text = module.restart_monitoring_text.format(
+        nickname=monitoring.nickname, )
     await callback_query.message.edit_text(text=text, reply_markup=markup)
 
 
@@ -188,13 +220,8 @@ async def pause_my_monitoring_request(client: Client, callback_query: CallbackQu
         nickname=nickname,
         social_network=social_network)
 
-    text = module.pause_monitoring_text.format(
-        nickname=monitoring.nickname, )
-
     # pause monitoring in redis
-    await UserMonitoringRequestsDBConnector.save_user_monitoring(
-        UserMonitoringRequest(user_id=callback_query.from_user.id,
-                              active=False))
+    await UserMonitoringRequestsDBConnector.deactivate_last_user_monitoring(callback_query.from_user.id)
 
     # pause monitoring job
     scheduler.pause_job(
@@ -205,6 +232,8 @@ async def pause_my_monitoring_request(client: Client, callback_query: CallbackQu
     markup = InlineKeyboardMarkup(
         [[InlineKeyboardButton(text='<< Вернуться к мониторингам', callback_data='RETURN_TO_MONITORING')]])
 
+    text = module.pause_monitoring_text.format(
+        nickname=monitoring.nickname, )
     await callback_query.message.edit_text(text=text, reply_markup=markup)
 
 
@@ -285,16 +314,14 @@ async def callback(client: Client, update: CallbackQuery | Message) -> None:
 @Client.on_callback_query(filters.regex('^SUBSCRIBE'))
 @handle_common_exceptions_decorator
 async def handle_subscribe(client: Client, callback_query: CallbackQuery) -> None:
+    # confirm monitoring
+    await UserMonitoringRequestsDBConnector.confirm_last_user_monitoring(callback_query.from_user.id)
+
     # extract user data from redis
     user_data = await UserMonitoringRequestsDBConnector.get_last_user_monitoring(callback_query.from_user.id)
 
     # made user monitoring request active
-    await UserMonitoringRequestsDBConnector.save_user_monitoring(
-        UserMonitoringRequest(
-            user_id=callback_query.from_user.id,
-            start_date=datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-            active=True
-        ))
+    await UserMonitoringRequestsDBConnector.activate_last_user_monitoring(callback_query.from_user.id)
 
     start_time = datetime.datetime.now()
     if current_jobs := scheduler.get_jobs():
@@ -336,7 +363,7 @@ async def handle_subscribe_confirmation(client: Client, callback_query: Callback
     text = module.subscribe_confirmation_text.format(
         social_network=user_data.social_network.capitalize(),
         nickname=user_data.nickname,
-        media_list=f'◾ {user_data.selected_media_type}\n')
+        media_list=f'✸ {user_data.selected_media_type}\n')
 
     await callback_query.message.reply_text(text=text,
                                             reply_markup=InlineKeyboardMarkup(
@@ -384,10 +411,10 @@ def get_keyboard_select_media_type(social_network: ThirdPartyAPISource, selected
             ] for media_type in (module.stories_button, module.posts_button, module.reels_button)
         ]
         markup = [
-                *media_type_buttons,
-            ]
+            *media_type_buttons,
+        ]
         if selected:
-            markup.append([InlineKeyboardButton(module.subscribe_button, callback_data='CONFIRM_SUBSCRIBE')],)
+            markup.append([InlineKeyboardButton(module.subscribe_button, callback_data='CONFIRM_SUBSCRIBE')], )
 
     else:
         markup = [
@@ -419,7 +446,7 @@ async def handle_user_link_input(client: Client, message: Message) -> None:
         await message.reply_text(
             text=module.subscribe_confirmation_text.format(nickname=nickname,
                                                            social_network=ThirdPartyAPISource.tiktok.value.capitalize(),
-                                                           media_list=f'◾ Видео'),
+                                                           media_list=f'✸ Видео'),
             reply_markup=get_keyboard_select_media_type(social_network=ThirdPartyAPISource.tiktok))
 
         await UserMonitoringRequestsDBConnector.save_user_monitoring(
