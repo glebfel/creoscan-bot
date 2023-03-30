@@ -255,8 +255,7 @@ async def delete_my_monitoring_request(client: Client, callback_query: CallbackQ
 
 @Client.on_callback_query(filters.regex(rf'^{module.return_button}$') |
                           filters.regex(rf'^{module.create_monitoring_button}$'))
-@Client.on_message(filters.regex(rf'^{module.button}$') |
-                   filters.command(module.command) | filters.regex(module.return_button))
+@Client.on_message(filters.regex(rf'^{module.button}$') | filters.command(module.command))
 @inform_user_decorator
 @handle_trottling_decorator
 @handle_common_exceptions_decorator

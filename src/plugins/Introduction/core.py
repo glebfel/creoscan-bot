@@ -2,7 +2,6 @@ import logging
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
-
 from pyrogram import Client, filters
 from pyrogram.types import (
     CallbackQuery,
@@ -19,6 +18,7 @@ from common.decorators import (
 )
 from db.connector import database_connector
 from models import BotModule
+from plugins.Monitoring.core import module as monitoring_module
 from ..base import callback as base_callback
 from ..base import get_modules_buttons
 
@@ -60,7 +60,7 @@ class IntroductionModule(BotModule):
 module = IntroductionModule(name='introduction')
 
 
-@Client.on_message(filters.command('start'))
+@Client.on_message(filters.command('start') | filters.regex(rf'^{monitoring_module.return_button}$'))
 @handle_common_exceptions_decorator
 @handle_trottling_decorator
 @inform_user_decorator
@@ -77,13 +77,13 @@ async def callback(client: Client, update: CallbackQuery | Message) -> None:
     user = await database_connector.get_user(user_id=update.from_user.id)
     log.debug('User exists: %s', user)
 
-    utm = [str(arg) for arg in update.command if str(arg).startswith('utm_')]
+    utm = [str(arg) for arg in update.command if str(arg).startswith('utm_')] if update.command else None
     log.debug('Got utm list: %s', utm)
 
     if utm and (
-        not user  # new user
-        or not user.utm_created_at  # old user, but never followed utm
-        or user.utm_created_at + timedelta(days=settings.UTM_COOLDOWN_DAYS) < datetime.now()  # utm is outdated
+            not user  # new user
+            or not user.utm_created_at  # old user, but never followed utm
+            or user.utm_created_at + timedelta(days=settings.UTM_COOLDOWN_DAYS) < datetime.now()  # utm is outdated
     ):
         userdata['utm'] = utm
 
