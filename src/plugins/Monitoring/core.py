@@ -339,7 +339,6 @@ async def handle_subscribe(client: Client, callback_query: CallbackQuery) -> Non
         name=f'Monitoring for {user_data.nickname} by {user_data.user_id}',
         misfire_grace_time=None,
         kwargs={
-            'clients_list': [client],
             'module': module,
             'message': callback_query.message,
             'social_network': user_data.social_network,
