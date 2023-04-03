@@ -16,7 +16,7 @@ from common.decorators import (
     inform_user_decorator, handle_common_exceptions_decorator,
 )
 from common.filters import conversation_filter
-from common.models import ThirdPartyAPISource
+from common.models import ThirdPartyAPISource, ThirdPartyAPIMediaItem, ThirdPartyAPIMediaType
 from helpers.state import redis_connector
 from helpers.utils import extract_username_from_link
 from plugins.Monitoring.jobs import monitoring_scheduler
@@ -25,11 +25,11 @@ from models import BotModule
 from plugins.Monitoring.utils import UserMonitoringRequestsDBConnector, UserMonitoringRequest, seconds_to_cron
 from plugins.base import get_modules_buttons
 
-tg_client = None
-
-
 @dataclass
 class MonitoringModule(BotModule):
+    # to store client in memory
+    tg_client = None
+
     instagram_media_type_choice_text: str = field(init=False)
     subscribe_confirmation_text: str = field(init=False)
     subscribe_text: str = field(init=False)
@@ -291,8 +291,7 @@ async def delete_my_monitoring_request(client: Client, callback_query: CallbackQ
 @handle_trottling_decorator
 @handle_common_exceptions_decorator
 async def callback(client: Client, update: CallbackQuery | Message) -> None:
-    global tg_client
-    tg_client = client
+    MonitoringModule.tg_client = client
 
     # response with modules's introduction text
     user_requests = await UserMonitoringRequestsDBConnector.get_all_user_monitorings(update.from_user.id)
@@ -344,7 +343,7 @@ async def handle_subscribe(client: Client, callback_query: CallbackQuery) -> Non
         name=f'Monitoring for {user_data.nickname} by {user_data.user_id}',
         misfire_grace_time=None,
         kwargs={
-            'get_current_client_func': get_current_client,
+            'message_handler': send_monitoring_message_to_user,
             'module': module,
             'message': callback_query.message,
             'social_network': user_data.social_network,
@@ -475,5 +474,23 @@ async def handle_user_link_input(client: Client, message: Message) -> None:
             new=True)
 
 
-def get_current_client():
-    return tg_client
+async def send_monitoring_message_to_user(chat_id: int, message: str, media: ThirdPartyAPIMediaItem = None) -> None:
+    if MonitoringModule.tg_client:
+        if media:
+            match media.media_type:
+                case ThirdPartyAPIMediaType.photo:
+                    await MonitoringModule.tg_client.send_photo(
+                        chat_id=chat_id,
+                        caption=message,
+                        photo=media.media_url,
+                        reply_markup=module.result_keyboard,
+                    )
+                case ThirdPartyAPIMediaType.video:
+                    await MonitoringModule.tg_client.send_video(
+                        chat_id=chat_id,
+                        caption=message,
+                        video=media.media_url,
+                        reply_markup=module.result_keyboard,
+                    )
+        else:
+            await MonitoringModule.tg_client.send_message(chat_id=chat_id, text=message)
