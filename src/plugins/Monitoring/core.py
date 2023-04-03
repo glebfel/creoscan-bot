@@ -25,6 +25,8 @@ from models import BotModule
 from plugins.Monitoring.utils import UserMonitoringRequestsDBConnector, UserMonitoringRequest, seconds_to_cron
 from plugins.base import get_modules_buttons
 
+tg_client = None
+
 
 @dataclass
 class MonitoringModule(BotModule):
@@ -289,6 +291,9 @@ async def delete_my_monitoring_request(client: Client, callback_query: CallbackQ
 @handle_trottling_decorator
 @handle_common_exceptions_decorator
 async def callback(client: Client, update: CallbackQuery | Message) -> None:
+    global tg_client
+    tg_client = client
+
     # response with modules's introduction text
     user_requests = await UserMonitoringRequestsDBConnector.get_all_user_monitorings(update.from_user.id)
 
@@ -339,6 +344,7 @@ async def handle_subscribe(client: Client, callback_query: CallbackQuery) -> Non
         name=f'Monitoring for {user_data.nickname} by {user_data.user_id}',
         misfire_grace_time=None,
         kwargs={
+            'get_current_client_func': get_current_client,
             'module': module,
             'message': callback_query.message,
             'social_network': user_data.social_network,
@@ -467,3 +473,7 @@ async def handle_user_link_input(client: Client, message: Message) -> None:
                                   nickname=nickname,
                                   social_network=social_network),
             new=True)
+
+
+def get_current_client():
+    return tg_client
