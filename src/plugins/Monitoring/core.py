@@ -25,6 +25,7 @@ from models import BotModule
 from plugins.Monitoring.utils import UserMonitoringRequestsDBConnector, UserMonitoringRequest, seconds_to_cron
 from plugins.base import get_modules_buttons
 
+
 @dataclass
 class MonitoringModule(BotModule):
     # to store client in memory

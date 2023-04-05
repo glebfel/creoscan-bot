@@ -44,7 +44,7 @@ async def start_monitoring(
         # compare last item from storage
         last_data_id = await UserMonitoringRequestsDBConnector.get_last_updated_data_id(message.from_user.id)
 
-        if last_data_id != data.media_id and last_data_id is not None:
+        if last_data_id != data.media_id:
             result_message = module.result_text.format(media_type=media_type, nickname=nickname)
             await message_handler(chat_id=message.chat.id, message=result_message, media=data)
 
