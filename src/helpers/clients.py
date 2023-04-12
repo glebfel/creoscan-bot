@@ -1,3 +1,4 @@
+import datetime
 import json
 import logging
 
@@ -91,11 +92,13 @@ class InstagramRapidAPIClient(BaseThirdPartyAPIClient):
                 case 1:
                     items.append(ThirdPartyAPIMediaItem(media_type=ThirdPartyAPIMediaType.photo,
                                                         media_id=media['pk'],
-                                                        media_url=media['image_versions2']['candidates'][0]['url']))
+                                                        media_url=media['image_versions2']['candidates'][0]['url'],
+                                                        taken_at=datetime.datetime.fromtimestamp(media['taken_at'])))
                 case 2:
                     items.append(ThirdPartyAPIMediaItem(media_type=ThirdPartyAPIMediaType.video,
                                                         media_id=media['pk'],
-                                                        media_url=media['video_versions'][-1]['url']))
+                                                        media_url=media['video_versions'][-1]['url'],
+                                                        taken_at=datetime.datetime.fromtimestamp(media['taken_at'])))
         return ThirdPartyAPIClientAnswer(
             source=ThirdPartyAPISource.instagram,
             items=items,
@@ -171,11 +174,13 @@ class InstagramRapidAPIClient(BaseThirdPartyAPIClient):
                 case 1:
                     items.append(ThirdPartyAPIMediaItem(media_type=ThirdPartyAPIMediaType.photo,
                                                         media_id=post['pk'],
-                                                        media_url=post['image_versions2']['candidates'][0]['url']))
+                                                        media_url=post['image_versions2']['candidates'][0]['url'],
+                                                        taken_at=datetime.datetime.fromtimestamp(post['taken_at'])))
                 case 2:
                     items.append(ThirdPartyAPIMediaItem(media_type=ThirdPartyAPIMediaType.video,
                                                         media_id=post['pk'],
-                                                        media_url=post['video_versions'][-1]['url']))
+                                                        media_url=post['video_versions'][-1]['url'],
+                                                        taken_at=datetime.datetime.fromtimestamp(post['taken_at'])))
                 case 8:
                     # carousel media
                     for media in post['carousel_media']:
@@ -183,13 +188,13 @@ class InstagramRapidAPIClient(BaseThirdPartyAPIClient):
                             case 1:
                                 items.append(ThirdPartyAPIMediaItem(media_type=ThirdPartyAPIMediaType.photo,
                                                                     media_id=media['pk'],
-                                                                    media_url=
-                                                                    media['image_versions2']['candidates'][0][
-                                                                        'url']))
+                                                                    media_url=media['image_versions2']['candidates'][0]['url'],
+                                                                    taken_at=datetime.datetime.fromtimestamp(post['taken_at'])))
                             case 2:
                                 items.append(ThirdPartyAPIMediaItem(media_type=ThirdPartyAPIMediaType.video,
                                                                     media_id=media['pk'],
-                                                                    media_url=media['video_versions'][-1]['url']))
+                                                                    media_url=media['video_versions'][-1]['url'],
+                                                                    taken_at=datetime.datetime.fromtimestamp(post['taken_at'])))
         return ThirdPartyAPIClientAnswer(
             source=ThirdPartyAPISource.instagram,
             items=items,
@@ -209,11 +214,13 @@ class InstagramRapidAPIClient(BaseThirdPartyAPIClient):
                 case 1:
                     items.append(ThirdPartyAPIMediaItem(media_type=ThirdPartyAPIMediaType.photo,
                                                         media_id=reel['pk'],
-                                                        media_url=reel['image_versions2']['candidates'][0]['url']))
+                                                        media_url=reel['image_versions2']['candidates'][0]['url'],
+                                                        taken_at=datetime.datetime.fromtimestamp(reel['taken_at'])))
                 case 2:
                     items.append(ThirdPartyAPIMediaItem(media_type=ThirdPartyAPIMediaType.video,
                                                         media_id=reel['pk'],
-                                                        media_url=reel['video_versions'][-1]['url']))
+                                                        media_url=reel['video_versions'][-1]['url'],
+                                                        taken_at=datetime.datetime.fromtimestamp(reel['taken_at'])))
         return ThirdPartyAPIClientAnswer(
             source=ThirdPartyAPISource.instagram,
             items=items,
@@ -297,7 +304,8 @@ class TikTokRapidAPIClient(BaseThirdPartyAPIClient):
             if ind == limit:
                 break
             items.append(ThirdPartyAPIMediaItem(media_type=ThirdPartyAPIMediaType.video,
-                                                media_url=video['play']))
+                                                media_url=video['play'],
+                                                taken_at=datetime.datetime.fromtimestamp(video['create_time'])))
 
         return ThirdPartyAPIClientAnswer(
             source=ThirdPartyAPISource.tiktok,

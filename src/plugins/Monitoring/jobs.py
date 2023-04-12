@@ -1,3 +1,4 @@
+import datetime
 import logging
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -7,7 +8,6 @@ from pyrogram.types import (
 
 import exceptions
 import settings
-from common.models import ThirdPartyAPIMediaType
 from helpers.base import api_adapter_module
 from models import BotModule
 from plugins.Monitoring.utils import get_monitoring_media_handler_func, UserMonitoringRequestsDBConnector
@@ -44,7 +44,7 @@ async def start_monitoring(
         # compare last item from storage
         last_data_id = await UserMonitoringRequestsDBConnector.get_last_updated_data_id(message.from_user.id)
 
-        if last_data_id != data.media_id:
+        if (last_data_id != data.media_id and last_data_id is not None) or (last_data_id is None and data.taken_at >= datetime.datetime.now()):
             result_message = module.result_text.format(media_type=media_type, nickname=nickname)
             await message_handler(chat_id=message.chat.id, message=result_message, media=data)
 

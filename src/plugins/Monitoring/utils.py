@@ -134,9 +134,9 @@ def get_monitoring_media_handler_func(module: BotModule, social_network: str, me
         return TikTokRapidAPIClient().get_tiktok_user_videos_by_username
 
 
-def seconds_to_cron(interval: int) -> CronTrigger:
+def seconds_to_cron(interval_seconds: int) -> CronTrigger:
     # Calculate time components
-    minutes, seconds = divmod(interval, 60)
+    minutes, seconds = divmod(interval_seconds, 60)
     hours, minutes = divmod(minutes, 60)
 
     # Create CronTrigger based on time components

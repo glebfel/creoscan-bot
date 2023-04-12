@@ -116,6 +116,7 @@ class ThirdPartyAPIMediaItem:
     media_type: ThirdPartyAPIMediaType = field(default=ThirdPartyAPIMediaType.unknown)
     media_url: str = field(default='')
     media_id: str = field(default='')
+    taken_at: datetime = field(default=datetime.datetime.now())
 
 
 @dataclass
