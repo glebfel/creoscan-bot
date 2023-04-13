@@ -162,21 +162,21 @@ def seconds_to_cron(interval_seconds: int) -> CronTrigger:
     minutes, seconds = divmod(interval_seconds, 60)
     hours, minutes = divmod(minutes, 60)
     if hours > 0:
-        if minutes > 0:
+        if minutes > 1:
             return CronTrigger(
                 minute='*/{}'.format(minutes),
-                hour='*/{}'.format(hours),
+                hour='*/{}'.format(hours) if hours > 1 else '*',
             )
         return CronTrigger(
-            hour='*/{}'.format(hours),
+            hour='*/{}'.format(hours) if hours > 1 else '*',
         )
     elif minutes > 0:
-        if seconds > 0:
+        if seconds > 1:
             return CronTrigger(
-                minute='*/{}'.format(minutes),
                 second='*/{}'.format(seconds),
+                minute='*/{}'.format(minutes) if minutes > 1 else '*',
             )
         return CronTrigger(
-            minute='*/{}'.format(minutes),
+            minute='*/{}'.format(minutes) if minutes > 1 else '*',
         )
-    return CronTrigger(second='*/{}'.format(seconds) if seconds > 0 else '*')
+    return CronTrigger(second='*/{}'.format(seconds) if seconds > 1 else '*')
