@@ -385,8 +385,12 @@ async def choose_media_type(client: Client, callback_query: CallbackQuery) -> No
     same, and changes entity (e.g. emoji) that represents selected hashtag.
     """
     # stashed hashtags contains only selected by user
-    selected_media_type: str = callback_query.data.replace('SELECT', '')
+    selected_media_type = callback_query.data.replace('SELECT', '')
 
+    user_request = await UserMonitoringRequestsDBConnector.get_last_user_monitoring(user_id=callback_query.from_user.id)
+    if user_request.selected_media_type == selected_media_type:
+        # clean by made media type equals None
+        selected_media_type = None
     # save media type to redis storage
     await UserMonitoringRequestsDBConnector.save_user_monitoring(
         UserMonitoringRequest(
@@ -400,7 +404,8 @@ async def choose_media_type(client: Client, callback_query: CallbackQuery) -> No
         ))
 
 
-def get_keyboard_select_media_type(social_network: ThirdPartyAPISource, selected: str = None) -> InlineKeyboardMarkup:
+def get_keyboard_select_media_type(social_network: ThirdPartyAPISource,
+                                   selected: str | None = None) -> InlineKeyboardMarkup:
     if social_network == ThirdPartyAPISource.instagram:
         media_type_buttons = [
             [
