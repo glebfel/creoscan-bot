@@ -118,13 +118,18 @@ class UserMonitoringRequestsDBConnector:
             key='monitoring_last_updated_media',
             user_id=user_id,
         )
+        # convert str time to datetime
+        monitoring_data['taken_at'] = datetime.datetime.strptime(monitoring_data['taken_at'].split('.')[0],
+                                                                 '%Y-%m-%d %H:%M:%S')
         monitoring_data = ThirdPartyAPIMediaItem(**monitoring_data) if monitoring_data else None
         # get last monitoring update date from storage
         last_update_date = await redis_connector.get_user_data(
             key='monitoring_last_updated_date',
             user_id=user_id,
         )
-        last_update_date = last_update_date if last_update_date else datetime.datetime.now()
+        # convert str time to datetime
+        last_update_date = datetime.datetime.strptime(last_update_date.split('.')[0], '%Y-%m-%d %H:%M:%S') \
+            if last_update_date else datetime.datetime.now()
         return UserMonitoringJob(user_id=user_id, data=monitoring_data, last_updated_at=last_update_date)
 
     @staticmethod
