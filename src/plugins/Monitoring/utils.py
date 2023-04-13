@@ -15,7 +15,7 @@ class UserMonitoringRequest:
     nickname: str = None
     social_network: str = None
     active: bool = None
-    selected_media_type: str = None
+    selected_media_type: str | None = None
     start_date: str = None
     is_confirmed: bool = None
 
@@ -53,7 +53,8 @@ class UserMonitoringRequestsDBConnector:
                 await redis_connector.save_data(key=str(user_request.user_id), data=monitoring_requests)
         else:
             monitoring_requests = await redis_connector.get_data(key=str(user_request.user_id))
-            monitoring_requests[-1].update((k, v) for k, v in asdict(user_request).items() if v is not None)
+            monitoring_requests[-1].update((k, v) for k, v in asdict(user_request).items() if v is not None or
+                                           k == "selected_media_type")
             await redis_connector.save_data(key=str(user_request.user_id), data=monitoring_requests)
 
     @staticmethod
@@ -160,8 +161,22 @@ def seconds_to_cron(interval_seconds: int) -> CronTrigger:
     # Calculate time components
     minutes, seconds = divmod(interval_seconds, 60)
     hours, minutes = divmod(minutes, 60)
-
-    # Create CronTrigger based on time components
-    return CronTrigger(second='*/{}'.format(seconds) if seconds > 0 else '*',
-                       minute='*/{}'.format(minutes) if minutes > 0 else '*',
-                       hour='*/{}'.format(hours) if hours > 0 else '*', )
+    if hours > 0:
+        if minutes > 0:
+            return CronTrigger(
+                minute='*/{}'.format(minutes),
+                hour='*/{}'.format(hours),
+            )
+        return CronTrigger(
+            hour='*/{}'.format(hours),
+        )
+    elif minutes > 0:
+        if seconds > 0:
+            return CronTrigger(
+                minute='*/{}'.format(minutes),
+                second='*/{}'.format(seconds),
+            )
+        return CronTrigger(
+            minute='*/{}'.format(minutes),
+        )
+    return CronTrigger(second='*/{}'.format(seconds) if seconds > 0 else '*')
