@@ -1,10 +1,9 @@
 import datetime
-from dataclasses import dataclass, asdict
-from datetime import timedelta
+from dataclasses import dataclass, asdict, field
 
 from apscheduler.triggers.cron import CronTrigger
 
-from common.models import ThirdPartyAPISource
+from common.models import ThirdPartyAPISource, ThirdPartyAPIMediaItem
 from helpers.clients import InstagramRapidAPIClient, TikTokRapidAPIClient
 from helpers.state import redis_connector
 from models import BotModule
@@ -19,6 +18,13 @@ class UserMonitoringRequest:
     selected_media_type: str = None
     start_date: str = None
     is_confirmed: bool = None
+
+
+@dataclass
+class UserMonitoringJob:
+    user_id: int
+    data: ThirdPartyAPIMediaItem = None
+    last_updated_at: datetime.datetime = field(default=datetime.datetime.now())
 
 
 class UserMonitoringRequestsDBConnector:
@@ -58,7 +64,8 @@ class UserMonitoringRequestsDBConnector:
 
     @staticmethod
     async def confirm_last_user_monitoring(user_id: int):
-        await UserMonitoringRequestsDBConnector.save_user_monitoring(UserMonitoringRequest(user_id=user_id, is_confirmed=True))
+        await UserMonitoringRequestsDBConnector.save_user_monitoring(UserMonitoringRequest(user_id=user_id,
+                                                                                           is_confirmed=True))
 
     @staticmethod
     async def activate_last_user_monitoring(user_id: int):
@@ -105,18 +112,33 @@ class UserMonitoringRequestsDBConnector:
         await redis_connector.save_data(key=str(user_id), data=[asdict(_) for _ in requests])
 
     @staticmethod
-    async def get_last_updated_data_id(user_id: int):
-        last_data_id = await redis_connector.get_user_data(
-            key='last_updated_item',
+    async def get_last_updated_monitoring_data(user_id: int) -> UserMonitoringJob:
+        # get last media data from storage
+        monitoring_data = await redis_connector.get_user_data(
+            key='monitoring_last_updated_media',
             user_id=user_id,
         )
-        return last_data_id
+        monitoring_data = ThirdPartyAPIMediaItem(**monitoring_data) if monitoring_data else None
+        # get last monitoring update date from storage
+        last_update_date = await redis_connector.get_user_data(
+            key='monitoring_last_updated_date',
+            user_id=user_id,
+        )
+        last_update_date = last_update_date if last_update_date else datetime.datetime.now()
+        return UserMonitoringJob(user_id=user_id, data=monitoring_data, last_updated_at=last_update_date)
 
     @staticmethod
-    async def save_last_updated_data_id(data_id: int, user_id: int):
+    async def save_last_updated_monitoring_data(data: ThirdPartyAPIMediaItem, user_id: int):
+        # save media data
         await redis_connector.save_user_data(
-            key='last_updated_item',
-            data=data_id,
+            key='monitoring_last_updated_media',
+            data=asdict(data),
+            user_id=user_id,
+        )
+        # save last update date
+        await redis_connector.save_user_data(
+            key='monitoring_last_updated_date',
+            data=datetime.datetime.now(),
             user_id=user_id,
         )
 

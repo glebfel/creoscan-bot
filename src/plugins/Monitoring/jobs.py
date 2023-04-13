@@ -1,5 +1,5 @@
-import datetime
 import logging
+from dataclasses import asdict
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from pyrogram.types import (
@@ -9,6 +9,7 @@ from pyrogram.types import (
 import exceptions
 import settings
 from helpers.base import api_adapter_module
+from helpers.state import redis_connector
 from models import BotModule
 from plugins.Monitoring.utils import get_monitoring_media_handler_func, UserMonitoringRequestsDBConnector
 
@@ -35,21 +36,22 @@ async def start_monitoring(
 ) -> None:
     custom_error_message: str = getattr(module, 'error_text', api_adapter_module.unhandled_error_text)
     try:
-        # get last item
-        data = await get_monitoring_media_handler_func(module=module, social_network=social_network,
-                                                       media_type=media_type)(
+        # get last media from api source
+        new_data = await get_monitoring_media_handler_func(module=module, social_network=social_network,
+                                                           media_type=media_type)(
             nickname, limit=1)
-        data = data.items[0]
-
-        # compare last item from storage
-        last_data_id = await UserMonitoringRequestsDBConnector.get_last_updated_data_id(message.from_user.id)
-
-        if (last_data_id != data.media_id and last_data_id is not None) or (last_data_id is None and data.taken_at >= datetime.datetime.now()):
+        if not new_data.items:
+            return
+        else:
+            new_data = new_data.items[0]
+        # compare last monitoring data from storage
+        last_monitoring_data = await UserMonitoringRequestsDBConnector.get_last_updated_monitoring_data(message.from_user.id)
+        if (last_monitoring_data.data and last_monitoring_data.data.media_id != new_data.media_id) or \
+                (last_monitoring_data.data is None and last_monitoring_data.last_updated_at < new_data.taken_at):
             result_message = module.result_text.format(media_type=media_type, nickname=nickname)
-            await message_handler(chat_id=message.chat.id, message=result_message, media=data)
-
+            await message_handler(chat_id=message.chat.id, message=result_message, media=new_data)
         # save last item id to storage
-        await UserMonitoringRequestsDBConnector.save_last_updated_data_id(data.media_id, message.from_user.id)
+        await UserMonitoringRequestsDBConnector.save_last_updated_monitoring_data(data=new_data, user_id=message.from_user.id)
 
     except exceptions.AccountIsPrivate:
         await message_handler(chat_id=message.chat.id, message=api_adapter_module.error_text_account_private)
