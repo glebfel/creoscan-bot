@@ -53,8 +53,7 @@ class UserMonitoringRequestsDBConnector:
                 await redis_connector.save_data(key=str(user_request.user_id), data=monitoring_requests)
         else:
             monitoring_requests = await redis_connector.get_data(key=str(user_request.user_id))
-            monitoring_requests[-1].update((k, v) for k, v in asdict(user_request).items() if v is not None or
-                                           k == "selected_media_type")
+            monitoring_requests[-1].update((k, v) for k, v in asdict(user_request).items() if v is not None)
             await redis_connector.save_data(key=str(user_request.user_id), data=monitoring_requests)
 
     @staticmethod
