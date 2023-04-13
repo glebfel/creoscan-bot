@@ -1,5 +1,4 @@
 import logging
-from dataclasses import asdict
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from pyrogram.types import (
@@ -9,7 +8,6 @@ from pyrogram.types import (
 import exceptions
 import settings
 from helpers.base import api_adapter_module
-from helpers.state import redis_connector
 from models import BotModule
 from plugins.Monitoring.utils import get_monitoring_media_handler_func, UserMonitoringRequestsDBConnector
 
