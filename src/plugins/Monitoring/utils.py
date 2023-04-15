@@ -16,7 +16,7 @@ class UserMonitoringRequest:
     social_network: str = None
     active: bool = None
     selected_media_type: str | None = None
-    start_date: str = None
+    start_date: datetime.datetime = field(default=datetime.datetime.now())
     is_confirmed: bool = None
 
 
@@ -118,10 +118,11 @@ class UserMonitoringRequestsDBConnector:
             key='monitoring_last_updated_media',
             user_id=user_id,
         )
-        # convert str time to datetime
-        monitoring_data['taken_at'] = datetime.datetime.strptime(monitoring_data['taken_at'].split('.')[0],
-                                                                 '%Y-%m-%d %H:%M:%S')
         monitoring_data = ThirdPartyAPIMediaItem(**monitoring_data) if monitoring_data else None
+        # convert str time to datetime
+        if monitoring_data:
+            monitoring_data.taken_at = datetime.datetime.strptime(monitoring_data.taken_at.split('.')[0],
+                                                                  '%Y-%m-%d %H:%M:%S')
         # get last monitoring update date from storage
         last_update_date = await redis_connector.get_user_data(
             key='monitoring_last_updated_date',
