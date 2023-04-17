@@ -58,7 +58,7 @@ async def start_monitoring(
         await message_handler(chat_id=message.chat.id, message=api_adapter_module.error_text_account_private)
     except exceptions.AccountNotExist:
         await message_handler(chat_id=message.chat.id, message=api_adapter_module.error_text_account_not_found)
-        monitoring_scheduler.remove_job(job_id=f'monitoring-{message.from_user.id}-{social_network}-{nickname}')
+        monitoring_scheduler.remove_job(job_id=f'monitoring-{message.chat.id}-{social_network}-{nickname}')
     except exceptions.EmptyResultsException:
         await message_handler(chat_id=message.chat.id, message=custom_error_message)
     except exceptions.ThirdPartyApiException:
