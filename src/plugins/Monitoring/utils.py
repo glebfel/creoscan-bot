@@ -1,30 +1,13 @@
 import datetime
-from dataclasses import dataclass, asdict, field
+from dataclasses import asdict
 
 from apscheduler.triggers.cron import CronTrigger
 
 from common.models import ThirdPartyAPISource, ThirdPartyAPIMediaItem
 from helpers.clients import InstagramRapidAPIClient, TikTokRapidAPIClient
 from helpers.state import redis_connector
+from plugins.Monitoring.schemas import UserMonitoringRequest
 from models import BotModule
-
-
-@dataclass
-class UserMonitoringRequest:
-    user_id: int
-    nickname: str = None
-    social_network: str = None
-    active: bool = None
-    selected_media_type: str | None = None
-    start_date: datetime.datetime = field(default=datetime.datetime.now())
-    is_confirmed: bool = None
-
-
-@dataclass
-class UserMonitoringJob:
-    user_id: int
-    data: ThirdPartyAPIMediaItem = None
-    last_updated_at: datetime.datetime = field(default=datetime.datetime.now())
 
 
 class UserMonitoringRequestsDBConnector:
@@ -57,10 +40,13 @@ class UserMonitoringRequestsDBConnector:
             await redis_connector.save_data(key=str(user_request.user_id), data=monitoring_requests)
 
     @staticmethod
-    async def get_last_user_monitoring(user_id: int) -> UserMonitoringRequest:
+    async def get_last_user_monitoring(user_id: int) -> UserMonitoringRequest | None:
         requests = await redis_connector.get_data(key=str(user_id))
         if requests:
-            return UserMonitoringRequest(**requests[-1])
+            monitoring = UserMonitoringRequest(**requests[-1])
+            monitoring.start_date = datetime.datetime.strptime(requests[-1]['start_date'].split('.')[0],
+                                                               '%Y-%m-%d %H:%M:%S')
+            return monitoring
 
     @staticmethod
     async def confirm_last_user_monitoring(user_id: int):
@@ -73,7 +59,6 @@ class UserMonitoringRequestsDBConnector:
         await UserMonitoringRequestsDBConnector.save_user_monitoring(
             UserMonitoringRequest(
                 user_id=user_id,
-                start_date=datetime.datetime.now().strftime('%d.%m.%Y'),
                 active=True
             ))
 
@@ -91,6 +76,8 @@ class UserMonitoringRequestsDBConnector:
         if monitoring_requests := await redis_connector.get_data(key=str(user_id)):
             for i in monitoring_requests:
                 user_request = UserMonitoringRequest(**i)
+                user_request.start_date = datetime.datetime.strptime(i['start_date'].split('.')[0],
+                                                                     '%Y-%m-%d %H:%M:%S')
                 if user_request.is_confirmed:
                     actual_monitorings.append(user_request)
         return actual_monitorings
@@ -112,7 +99,7 @@ class UserMonitoringRequestsDBConnector:
         await redis_connector.save_data(key=str(user_id), data=[asdict(_) for _ in requests])
 
     @staticmethod
-    async def get_last_updated_monitoring_data(user_id: int) -> UserMonitoringJob:
+    async def get_last_updated_monitoring_data(user_id: int) -> ThirdPartyAPIMediaItem:
         # get last media data from storage
         monitoring_data = await redis_connector.get_user_data(
             key='monitoring_last_updated_media',
@@ -123,15 +110,7 @@ class UserMonitoringRequestsDBConnector:
         if monitoring_data:
             monitoring_data.taken_at = datetime.datetime.strptime(monitoring_data.taken_at.split('.')[0],
                                                                   '%Y-%m-%d %H:%M:%S')
-        # get last monitoring update date from storage
-        last_update_date = await redis_connector.get_user_data(
-            key='monitoring_last_updated_date',
-            user_id=user_id,
-        )
-        # convert str time to datetime
-        last_update_date = datetime.datetime.strptime(last_update_date.split('.')[0], '%Y-%m-%d %H:%M:%S') \
-            if last_update_date else datetime.datetime.now()
-        return UserMonitoringJob(user_id=user_id, data=monitoring_data, last_updated_at=last_update_date)
+        return monitoring_data
 
     @staticmethod
     async def save_last_updated_monitoring_data(data: ThirdPartyAPIMediaItem, user_id: int):
@@ -139,12 +118,6 @@ class UserMonitoringRequestsDBConnector:
         await redis_connector.save_user_data(
             key='monitoring_last_updated_media',
             data=asdict(data),
-            user_id=user_id,
-        )
-        # save last update date
-        await redis_connector.save_user_data(
-            key='monitoring_last_updated_date',
-            data=datetime.datetime.now(),
             user_id=user_id,
         )
 

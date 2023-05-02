@@ -42,12 +42,13 @@ async def start_monitoring(
             return
         else:
             new_data = new_data.items[0]
+        # get job start time
+        monitoring_start_date = (
+            await UserMonitoringRequestsDBConnector.get_last_user_monitoring(user_id=message.chat.id)).start_date
         # compare last monitoring data from storage
         last_monitoring_data = await UserMonitoringRequestsDBConnector.get_last_updated_monitoring_data(message.chat.id)
-        if (not last_monitoring_data.data or
-                last_monitoring_data.data and
-                last_monitoring_data.data.taken_at < new_data.taken_at
-        ):
+        if ((not last_monitoring_data and monitoring_start_date < new_data.taken_at) or
+                (last_monitoring_data and last_monitoring_data.taken_at < new_data.taken_at)):
             result_message = module.result_text.format(media_type=media_type, nickname=nickname)
             await message_handler(chat_id=message.chat.id, message=result_message, media=new_data)
         # save last item id to storage
