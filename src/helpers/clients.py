@@ -74,34 +74,39 @@ class InstagramRapidAPIClient(BaseThirdPartyAPIClient):
         'x-rapidapi-key': settings.INSTAGRAM_RAPIDAPI_KEY,
     }
 
-    async def get_instagram_user_stories(self, username: str, limit: int = None) -> ThirdPartyAPIClientAnswer:
+    async def get_instagram_user_stories(self, username: str,
+                                         limit: int = None,
+                                         start_from: datetime = None) -> ThirdPartyAPIClientAnswer:
         raw_data = await self.request(
             edge='user/stories',
             querystring={'username': username},
             url=settings.INSTAGRAM_RAPIDAPI_URL,
         )
         # all stories in list is located chronologically (first element is the earliest)
-        # so we need to reverse it
+        # so we need to reverse
         raw_data.reverse()
 
         items = []
         for ind, media in enumerate(raw_data):
-            if ind == limit:
+            if ind == limit or start_from is not None and start_from >= datetime.datetime.fromtimestamp(
+                    media['taken_at']):
                 break
             match media['media_type']:
                 case 1:
                     items.append(ThirdPartyAPIMediaItem(media_type=ThirdPartyAPIMediaType.photo,
                                                         media_id=media['pk'],
                                                         media_url=media['image_versions2']['candidates'][0]['url'],
-                                                        taken_at=datetime.datetime.fromtimestamp(media['taken_at'])))
+                                                        taken_at=datetime.datetime.fromtimestamp(
+                                                            media['taken_at'])))
                 case 2:
                     items.append(ThirdPartyAPIMediaItem(media_type=ThirdPartyAPIMediaType.video,
                                                         media_id=media['pk'],
                                                         media_url=media['video_versions'][-1]['url'],
-                                                        taken_at=datetime.datetime.fromtimestamp(media['taken_at'])))
+                                                        taken_at=datetime.datetime.fromtimestamp(
+                                                            media['taken_at'])))
         return ThirdPartyAPIClientAnswer(
             source=ThirdPartyAPISource.instagram,
-            items=items,
+            items=list(reversed(items)),  # reverse back in normal order
         )
 
     async def get_instagram_selected_reel(self, reel_id: str) -> ThirdPartyAPIClientAnswer:
@@ -160,7 +165,9 @@ class InstagramRapidAPIClient(BaseThirdPartyAPIClient):
             items=items,
         )
 
-    async def get_instagram_posts_by_username(self, username: str, limit: int = None) -> ThirdPartyAPIClientAnswer:
+    async def get_instagram_posts_by_username(self, username: str,
+                                              limit: int = None,
+                                              start_from: datetime = None) -> ThirdPartyAPIClientAnswer:
         raw_data = await self.request(
             edge='user/feed/v2',
             querystring={'username': username},
@@ -168,7 +175,8 @@ class InstagramRapidAPIClient(BaseThirdPartyAPIClient):
         )
         items = []
         for ind, post in enumerate(raw_data['items']):
-            if ind == limit:
+            if ind == limit or start_from is not None and start_from >= datetime.datetime.fromtimestamp(
+                    post['taken_at']):
                 break
             match post['media_type']:
                 case 1:
@@ -188,19 +196,24 @@ class InstagramRapidAPIClient(BaseThirdPartyAPIClient):
                             case 1:
                                 items.append(ThirdPartyAPIMediaItem(media_type=ThirdPartyAPIMediaType.photo,
                                                                     media_id=media['pk'],
-                                                                    media_url=media['image_versions2']['candidates'][0]['url'],
-                                                                    taken_at=datetime.datetime.fromtimestamp(post['taken_at'])))
+                                                                    media_url=media['image_versions2']['candidates'][0][
+                                                                        'url'],
+                                                                    taken_at=datetime.datetime.fromtimestamp(
+                                                                        post['taken_at'])))
                             case 2:
                                 items.append(ThirdPartyAPIMediaItem(media_type=ThirdPartyAPIMediaType.video,
                                                                     media_id=media['pk'],
                                                                     media_url=media['video_versions'][-1]['url'],
-                                                                    taken_at=datetime.datetime.fromtimestamp(post['taken_at'])))
+                                                                    taken_at=datetime.datetime.fromtimestamp(
+                                                                        post['taken_at'])))
         return ThirdPartyAPIClientAnswer(
             source=ThirdPartyAPISource.instagram,
-            items=items,
+            items=list(reversed(items)),  # reverse back in normal order
         )
 
-    async def get_instagram_reels_by_username(self, username: str, limit: int = None) -> ThirdPartyAPIClientAnswer:
+    async def get_instagram_reels_by_username(self, username: str,
+                                              limit: int = None,
+                                              start_from: datetime.datetime = None) -> ThirdPartyAPIClientAnswer:
         raw_data = await self.request(
             edge='user/reels',
             querystring={'username': username, 'limit': str(limit)},
@@ -208,7 +221,8 @@ class InstagramRapidAPIClient(BaseThirdPartyAPIClient):
         )
         items = []
         for ind, reel in enumerate(raw_data['items']):
-            if ind == limit:
+            if ind == limit or start_from is not None and start_from >= datetime.datetime.fromtimestamp(
+                    reel['taken_at']):
                 break
             match reel['media_type']:
                 case 1:
@@ -223,7 +237,7 @@ class InstagramRapidAPIClient(BaseThirdPartyAPIClient):
                                                         taken_at=datetime.datetime.fromtimestamp(reel['taken_at'])))
         return ThirdPartyAPIClientAnswer(
             source=ThirdPartyAPISource.instagram,
-            items=items,
+            items=list(reversed(items)),  # reverse back in normal order
         )
 
     async def get_instagram_user_highlights(self, highlight_url: str) -> ThirdPartyAPIClientAnswer:
