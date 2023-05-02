@@ -3,7 +3,7 @@ from dataclasses import asdict
 
 from apscheduler.triggers.cron import CronTrigger
 
-from common.models import ThirdPartyAPISource, ThirdPartyAPIMediaItem
+from common.models import ThirdPartyAPISource, ThirdPartyAPIMediaItem, ThirdPartyAPIClientAnswer
 from helpers.clients import InstagramRapidAPIClient, TikTokRapidAPIClient
 from helpers.state import redis_connector
 from plugins.Monitoring.schemas import UserMonitoringRequest
@@ -99,25 +99,24 @@ class UserMonitoringRequestsDBConnector:
         await redis_connector.save_data(key=str(user_id), data=[asdict(_) for _ in requests])
 
     @staticmethod
-    async def get_last_updated_monitoring_data(user_id: int) -> ThirdPartyAPIMediaItem:
+    async def get_last_monitoring_media_date(user_id: int) -> ThirdPartyAPIMediaItem:
         # get last media data from storage
-        monitoring_data = await redis_connector.get_user_data(
+        monitoring_date = await redis_connector.get_user_data(
             key='monitoring_last_updated_media',
             user_id=user_id,
         )
-        monitoring_data = ThirdPartyAPIMediaItem(**monitoring_data) if monitoring_data else None
         # convert str time to datetime
-        if monitoring_data:
-            monitoring_data.taken_at = datetime.datetime.strptime(monitoring_data.taken_at.split('.')[0],
-                                                                  '%Y-%m-%d %H:%M:%S')
-        return monitoring_data
+        if monitoring_date:
+            monitoring_date = datetime.datetime.strptime(monitoring_date.split('.')[0],
+                                                         '%Y-%m-%d %H:%M:%S')
+        return monitoring_date
 
     @staticmethod
-    async def save_last_updated_monitoring_data(data: ThirdPartyAPIMediaItem, user_id: int):
+    async def save_last_monitoring_media_data(date: datetime.datetime, user_id: int):
         # save media data
         await redis_connector.save_user_data(
             key='monitoring_last_updated_media',
-            data=asdict(data),
+            data=date,
             user_id=user_id,
         )
 
