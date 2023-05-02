@@ -44,15 +44,15 @@ async def start_monitoring(
             new_data = new_data.items[0]
         # compare last monitoring data from storage
         last_monitoring_data = await UserMonitoringRequestsDBConnector.get_last_updated_monitoring_data(message.chat.id)
-        if (last_monitoring_data.data and
-            last_monitoring_data.data.media_id != new_data.media_id and
-            last_monitoring_data.data.taken_at < new_data.taken_at) or \
-                (last_monitoring_data.data is None
-                 and last_monitoring_data.last_updated_at < new_data.taken_at):
+        if (not last_monitoring_data.data or
+                last_monitoring_data.data and
+                last_monitoring_data.data.taken_at < new_data.taken_at
+        ):
             result_message = module.result_text.format(media_type=media_type, nickname=nickname)
             await message_handler(chat_id=message.chat.id, message=result_message, media=new_data)
         # save last item id to storage
-        await UserMonitoringRequestsDBConnector.save_last_updated_monitoring_data(data=new_data, user_id=message.chat.id)
+        await UserMonitoringRequestsDBConnector.save_last_updated_monitoring_data(data=new_data,
+                                                                                  user_id=message.chat.id)
 
     except exceptions.AccountIsPrivate:
         await message_handler(chat_id=message.chat.id, message=api_adapter_module.error_text_account_private)
