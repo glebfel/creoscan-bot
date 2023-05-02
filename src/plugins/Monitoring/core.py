@@ -16,7 +16,7 @@ from common.decorators import (
     inform_user_decorator, handle_common_exceptions_decorator,
 )
 from common.filters import conversation_filter
-from common.models import ThirdPartyAPISource, ThirdPartyAPIMediaItem, ThirdPartyAPIMediaType
+from common.models import ThirdPartyAPISource, ThirdPartyAPIMediaItem, ThirdPartyAPIMediaType, ThirdPartyAPIClientAnswer
 from helpers.state import redis_connector
 from helpers.utils import extract_username_from_link
 from plugins.Monitoring.jobs import monitoring_scheduler
@@ -480,23 +480,24 @@ async def handle_user_link_input(client: Client, message: Message) -> None:
             new=True)
 
 
-async def send_monitoring_message_to_user(chat_id: int, message: str, media: ThirdPartyAPIMediaItem = None) -> None:
+async def send_monitoring_message_to_user(chat_id: int, message: str, media: ThirdPartyAPIClientAnswer = None) -> None:
     if MonitoringModule.tg_client:
         if media:
-            match media.media_type:
-                case ThirdPartyAPIMediaType.photo:
-                    await MonitoringModule.tg_client.send_photo(
-                        chat_id=chat_id,
-                        caption=message,
-                        photo=media.media_url,
-                        reply_markup=module.result_keyboard,
-                    )
-                case ThirdPartyAPIMediaType.video:
-                    await MonitoringModule.tg_client.send_video(
-                        chat_id=chat_id,
-                        caption=message,
-                        video=media.media_url,
-                        reply_markup=module.result_keyboard,
-                    )
+            for item in media.items:
+                match item.media_type:
+                    case ThirdPartyAPIMediaType.photo:
+                        await MonitoringModule.tg_client.send_photo(
+                            chat_id=chat_id,
+                            caption=message,
+                            photo=item.media_url,
+                            reply_markup=module.result_keyboard,
+                        )
+                    case ThirdPartyAPIMediaType.video:
+                        await MonitoringModule.tg_client.send_video(
+                            chat_id=chat_id,
+                            caption=message,
+                            video=item.media_url,
+                            reply_markup=module.result_keyboard,
+                        )
         else:
             await MonitoringModule.tg_client.send_message(chat_id=chat_id, text=message)
