@@ -170,7 +170,7 @@ async def edit_my_monitoring_request(client: Client, callback_query: CallbackQue
         social_network=social_network.capitalize(),
         media_type=monitoring.selected_media_type,
         active='активен' if monitoring.active else 'не активен',
-        start_date=monitoring.start_date, )
+        start_date=monitoring.start_date.strftime('%d.%m.%Y'),)
 
     # generate keyboard
     action_button = InlineKeyboardButton(text='Остановить', callback_data=f'PAUSE_{nickname}_{social_network}') \
