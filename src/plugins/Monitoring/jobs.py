@@ -9,7 +9,7 @@ import exceptions
 import settings
 from helpers.base import api_adapter_module
 from models import BotModule
-from plugins.Monitoring.utils import get_monitoring_media_handler_func, UserMonitoringRequestsDBConnector
+from plugins.Monitoring.utils import get_monitoring_media_handler_func, UserMonitoringDataDBConnector
 
 log = logging.getLogger(__name__)
 
@@ -36,9 +36,9 @@ async def start_monitoring(
     try:
         # get job start time
         monitoring_start_date = (
-            await UserMonitoringRequestsDBConnector.get_last_user_monitoring(user_id=message.chat.id)).start_date
+            await UserMonitoringDataDBConnector.get_last_user_monitoring(user_id=message.chat.id)).start_date
         # get last monitoring media date from storage
-        last_monitoring_media_date = await UserMonitoringRequestsDBConnector.get_last_monitoring_media_date(
+        last_monitoring_media_date = await UserMonitoringDataDBConnector.get_last_monitoring_media_date(
             message.chat.id)
         # get last media from api source
         new_data = await get_monitoring_media_handler_func(module=module, social_network=social_network,
@@ -49,7 +49,7 @@ async def start_monitoring(
             result_message = module.result_text.format(media_type=media_type, nickname=nickname)
             await message_handler(chat_id=message.chat.id, message=result_message, media=new_data)
             # save last monitoring media date to storage
-            await UserMonitoringRequestsDBConnector.save_last_monitoring_media_data(
+            await UserMonitoringDataDBConnector.save_last_monitoring_media_data(
                 date=new_data.items[-1].taken_at,
                 user_id=message.chat.id)
     except exceptions.AccountIsPrivate:
