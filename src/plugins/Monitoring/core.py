@@ -198,6 +198,11 @@ async def restart_my_monitoring_request(client: Client, callback_query: Callback
     # activate monitoring in redis
     await UserMonitoringDataDBConnector.activate_last_user_monitoring(callback_query.from_user.id)
 
+    # update last monitoring media date time in redis (to skip all media received after monitoring paused)
+    await UserMonitoringDataDBConnector.save_last_monitoring_media_data(
+        date=datetime.datetime.now(),
+        user_id=callback_query.from_user.id)
+
     # pause monitoring job
     monitoring_scheduler.resume_job(
         job_id=f'monitoring-{callback_query.from_user.id}-{social_network}-{nickname}'
