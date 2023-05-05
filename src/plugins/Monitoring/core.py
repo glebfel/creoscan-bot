@@ -22,7 +22,8 @@ from helpers.utils import extract_username_from_link
 from models import BotModule
 from plugins.Monitoring.jobs import monitoring_scheduler
 from plugins.Monitoring.jobs import start_monitoring
-from plugins.Monitoring.utils import UserMonitoringDataDBConnector, UserMonitoringRequest, seconds_to_cron
+from plugins.Monitoring.utils import UserMonitoringDataDBConnector, UserMonitoringRequest, seconds_to_cron, \
+    current_message_filter
 from plugins.base import get_modules_buttons
 
 
@@ -118,7 +119,7 @@ class MonitoringModule(BotModule):
 module = MonitoringModule('monitoring')
 
 
-@Client.on_callback_query(filters.regex('^RETURN_TO_MONITORING'))
+@Client.on_callback_query(filters.regex('^RETURN_TO_MONITORING') & conversation_filter(module.name))
 @Client.on_message(filters.regex(rf'^{module.my_monitoring_button}$') |
                    filters.command(module.my_monitoring_command))
 @handle_common_exceptions_decorator
@@ -126,6 +127,13 @@ async def handle_my_monitoring(client: Client, update: CallbackQuery | Message) 
     user_requests = await UserMonitoringDataDBConnector.get_all_user_monitorings(user_id=update.from_user.id)
     if isinstance(update, CallbackQuery):
         update = update.message
+
+    # update current message in which conversation user is
+    await redis_connector.save_user_data(
+        key='current_message',
+        data=None,
+        user_id=update.from_user.id,
+    )
 
     if len(user_requests) > 0:
         text = module.my_monitoring_active_introduction_text.format(
@@ -149,7 +157,7 @@ async def handle_my_monitoring(client: Client, update: CallbackQuery | Message) 
              [InlineKeyboardButton(module.return_button, callback_data=module.return_button)]]))
 
 
-@Client.on_callback_query(filters.regex('^account') | filters.regex('^RETURN_TO_EDIT'))
+@Client.on_callback_query((filters.regex('^account') | filters.regex('^RETURN_TO_EDIT')) & conversation_filter(module.name))
 async def edit_my_monitoring_request(client: Client, callback_query: CallbackQuery) -> None:
     if 'RETURN_TO_EDIT' in callback_query.data:
         user_data = callback_query.data.replace('RETURN_TO_EDIT_', '').split('_')
@@ -184,7 +192,7 @@ async def edit_my_monitoring_request(client: Client, callback_query: CallbackQue
     await callback_query.message.edit_text(text=text, reply_markup=markup)
 
 
-@Client.on_callback_query(filters.regex('^RESTART'))
+@Client.on_callback_query(filters.regex('^RESTART') & conversation_filter(module.name))
 async def restart_my_monitoring_request(client: Client, callback_query: CallbackQuery) -> None:
     user_data = callback_query.data.replace('RESTART_', '').split('_')
     social_network = user_data[-1]
@@ -217,7 +225,7 @@ async def restart_my_monitoring_request(client: Client, callback_query: Callback
     await callback_query.message.edit_text(text=text, reply_markup=markup)
 
 
-@Client.on_callback_query(filters.regex('^PAUSE'))
+@Client.on_callback_query(filters.regex('^PAUSE') & conversation_filter(module.name))
 async def pause_my_monitoring_request(client: Client, callback_query: CallbackQuery) -> None:
     user_data = callback_query.data.replace('PAUSE_', '').split('_')
     social_network = user_data[-1]
@@ -245,7 +253,7 @@ async def pause_my_monitoring_request(client: Client, callback_query: CallbackQu
     await callback_query.message.edit_text(text=text, reply_markup=markup)
 
 
-@Client.on_callback_query(filters.regex('^DELETE'))
+@Client.on_callback_query(filters.regex('^DELETE') & conversation_filter(module.name))
 async def delete_confirmation_my_monitoring_request(client: Client, callback_query: CallbackQuery) -> None:
     user_data = callback_query.data.replace('DELETE_', '').split('_')
     social_network = user_data[-1]
@@ -264,7 +272,7 @@ async def delete_confirmation_my_monitoring_request(client: Client, callback_que
     await callback_query.message.edit_text(text=text, reply_markup=markup)
 
 
-@Client.on_callback_query(filters.regex('^CONFIRM_DELETE'))
+@Client.on_callback_query(filters.regex('^CONFIRM_DELETE') & conversation_filter(module.name))
 async def delete_my_monitoring_request(client: Client, callback_query: CallbackQuery) -> None:
     user_data = callback_query.data.replace('CONFIRM_DELETE_', '').split('_')
     social_network = user_data[-1]
@@ -293,7 +301,7 @@ async def delete_my_monitoring_request(client: Client, callback_query: CallbackQ
 @Client.on_callback_query(filters.regex(rf'^{module.return_button}$') |
                           filters.regex(rf'^{module.create_monitoring_button}$'))
 @Client.on_message(filters.regex(rf'^{module.button}$') |
-                   filters.regex(rf'^{module.return_button}$') |
+                   (filters.regex(rf'^{module.return_button}$')) |
                    filters.command(module.command))
 @inform_user_decorator
 @handle_trottling_decorator
@@ -311,6 +319,13 @@ async def callback(client: Client, update: CallbackQuery | Message) -> None:
         user_id=update.from_user.id,
     )
 
+    # store current message in which conversation user is
+    await redis_connector.save_user_data(
+        key='current_message',
+        data='main',
+        user_id=update.from_user.id,
+    )
+
     if isinstance(update, CallbackQuery):
         update = update.message
 
@@ -323,7 +338,7 @@ async def callback(client: Client, update: CallbackQuery | Message) -> None:
     )
 
 
-@Client.on_callback_query(filters.regex('^SUBSCRIBE'))
+@Client.on_callback_query(filters.regex('^SUBSCRIBE') & conversation_filter(module.name))
 @handle_common_exceptions_decorator
 async def handle_subscribe(client: Client, callback_query: CallbackQuery) -> None:
     # confirm monitoring
@@ -367,7 +382,7 @@ async def handle_subscribe(client: Client, callback_query: CallbackQuery) -> Non
     await callback_query.message.reply_text(text=text)
 
 
-@Client.on_callback_query(filters.regex('^CONFIRM_SUBSCRIBE'))
+@Client.on_callback_query(filters.regex('^CONFIRM_SUBSCRIBE') & conversation_filter(module.name))
 @handle_common_exceptions_decorator
 async def handle_subscribe_confirmation(client: Client, callback_query: CallbackQuery) -> None:
     # extract user data from redis
@@ -384,7 +399,7 @@ async def handle_subscribe_confirmation(client: Client, callback_query: Callback
                                                                        callback_data='SUBSCRIBE')]]))
 
 
-@Client.on_callback_query(filters.regex('^SELECT'))
+@Client.on_callback_query(filters.regex('^SELECT') & conversation_filter(module.name))
 @handle_common_exceptions_decorator
 async def choose_media_type(client: Client, callback_query: CallbackQuery) -> None:
     """
@@ -446,6 +461,12 @@ def get_keyboard_select_media_type(social_network: ThirdPartyAPISource,
 @handle_common_exceptions_decorator
 @inform_user_decorator
 async def handle_user_link_input(client: Client, message: Message) -> None:
+    # update current message in which conversation user is
+    await redis_connector.save_user_data(
+        key='current_message',
+        data=None,
+        user_id=message.from_user.id,
+    )
     # check if user is already subscribed
     user_requests = await UserMonitoringDataDBConnector.get_all_user_monitorings(message.from_user.id)
     if len(user_requests) >= settings.FREE_MONITORING_REQUESTS_COUNT:

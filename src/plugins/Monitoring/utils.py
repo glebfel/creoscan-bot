@@ -2,12 +2,14 @@ import datetime
 from dataclasses import asdict
 
 from apscheduler.triggers.cron import CronTrigger
+from pyrogram import filters
 
 from common.models import ThirdPartyAPISource, ThirdPartyAPIMediaItem
 from helpers.clients import InstagramRapidAPIClient, TikTokRapidAPIClient
 from helpers.state import redis_connector
 from models import BotModule
 from plugins.Monitoring.schemas import UserMonitoringRequest
+from plugins.base import get_modules_buttons, get_modules_commands
 
 
 class UserMonitoringDataDBConnector:
@@ -167,3 +169,28 @@ def seconds_to_cron(interval_seconds: int) -> CronTrigger:
             minute='*/{}'.format(minutes) if minutes > 1 else '*',
         )
     return CronTrigger(second='*/{}'.format(seconds) if seconds > 1 else '*')
+
+
+def current_message_filter():
+    async def filter_by_conversation(filter_, client, update) -> bool:
+
+        # message can be sent on behalf of group chat
+        if not update.from_user:
+            return False
+
+        sender = update.from_user.id
+
+        current_message: str = await redis_connector.get_user_data(
+            key='current_message',
+            user_id=sender,
+        ) or None
+
+        if current_message == 'main':
+            return True
+
+        return False
+
+    return filters.create(
+        filter_by_conversation,
+        'MonitoringModuleFilter',
+    )

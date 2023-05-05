@@ -16,8 +16,10 @@ from common.decorators import (
     handle_common_exceptions_decorator,
     inform_user_decorator,
 )
+from plugins.Monitoring.core import module as monitoring_module
 from db.connector import database_connector
 from models import BotModule
+from ..Monitoring.utils import current_message_filter
 from ..base import callback as base_callback
 from ..base import get_modules_buttons
 
@@ -59,7 +61,9 @@ class IntroductionModule(BotModule):
 module = IntroductionModule(name='introduction')
 
 
-@Client.on_message(filters.command('start'))
+@Client.on_message(filters.command('start') |
+                   (filters.regex(rf'^{monitoring_module.return_button}$') &
+                    current_message_filter()))
 @handle_common_exceptions_decorator
 @handle_trottling_decorator
 @inform_user_decorator
