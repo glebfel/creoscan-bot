@@ -68,9 +68,6 @@ module = IntroductionModule(name='introduction')
 @handle_trottling_decorator
 @inform_user_decorator
 async def callback(client: Client, update: CallbackQuery | Message) -> None:
-    # init tg client for monitoring job
-    monitoring_module.tg_client = client
-
     # save or update the user in DB
     userdata = dict(
         user_id=update.from_user.id,
