@@ -307,6 +307,7 @@ async def delete_my_monitoring_request(client: Client, callback_query: CallbackQ
 @handle_trottling_decorator
 @handle_common_exceptions_decorator
 async def callback(client: Client, update: CallbackQuery | Message) -> None:
+    # init tg client for monitoring job
     MonitoringModule.tg_client = client
 
     # response with modules's introduction text
