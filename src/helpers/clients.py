@@ -304,7 +304,9 @@ class TikTokRapidAPIClient(BaseThirdPartyAPIClient):
         'x-rapidapi-key': settings.TIKTOK_RAPIDAPI_KEY,
     }
 
-    async def get_tiktok_user_videos_by_username(self, username, limit: int = None) -> ThirdPartyAPIClientAnswer:
+    async def get_tiktok_user_videos_by_username(self, username,
+                                                 limit: int = None,
+                                                 start_from: datetime.datetime = None) -> ThirdPartyAPIClientAnswer:
         raw_data = await self.request(
             edge='user/posts',
             querystring={"unique_id": username},
@@ -315,7 +317,8 @@ class TikTokRapidAPIClient(BaseThirdPartyAPIClient):
 
         items = []
         for ind, video in enumerate(raw_data['data']['videos']):
-            if ind == limit:
+            if ind == limit or start_from is not None and start_from >= datetime.datetime.fromtimestamp(
+                    video['create_time']):
                 break
             items.append(ThirdPartyAPIMediaItem(media_type=ThirdPartyAPIMediaType.video,
                                                 media_url=video['play'],
@@ -323,7 +326,7 @@ class TikTokRapidAPIClient(BaseThirdPartyAPIClient):
 
         return ThirdPartyAPIClientAnswer(
             source=ThirdPartyAPISource.tiktok,
-            items=items
+            items=list(reversed(items))
         )
 
     async def get_tiktok_video(self, url: str, unknown_media: bool = False) -> ThirdPartyAPIClientAnswer:
