@@ -30,7 +30,8 @@ from plugins.base import get_modules_buttons
 
 @dataclass
 class MonitoringModule(BotModule):
-    # to store client in memory
+    # store client in memory for monitoring callback method
+    # (store as class attribute - so the module instance doesn't have it)
     tg_client = None
 
     instagram_media_type_choice_text: str = field(init=False)
@@ -530,6 +531,6 @@ async def send_monitoring_message_to_user(chat_id: int, message: str, media: Thi
                             reply_markup=module.result_keyboard,
                         )
         else:
-            await module.tg_client.send_message(chat_id=chat_id, text=message)
+            await MonitoringModule.tg_client.send_message(chat_id=chat_id, text=message)
     else:
         logging.error('tg_client in monitoring module is None')
