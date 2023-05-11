@@ -1,4 +1,5 @@
 import datetime
+import logging
 from dataclasses import dataclass, field
 
 from pyrogram import Client, filters
@@ -529,4 +530,6 @@ async def send_monitoring_message_to_user(chat_id: int, message: str, media: Thi
                             reply_markup=module.result_keyboard,
                         )
         else:
-            await MonitoringModule.tg_client.send_message(chat_id=chat_id, text=message)
+            await module.tg_client.send_message(chat_id=chat_id, text=message)
+    else:
+        logging.error('tg_client in monitoring module is None')
