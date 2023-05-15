@@ -23,16 +23,17 @@ from helpers.utils import extract_username_from_link
 from models import BotModule
 from plugins.Monitoring.jobs import monitoring_scheduler
 from plugins.Monitoring.jobs import start_monitoring
-from plugins.Monitoring.utils import UserMonitoringDataDBConnector, UserMonitoringRequest, seconds_to_cron, \
-    current_message_filter
+from plugins.Monitoring.utils import UserMonitoringDataDBConnector, UserMonitoringRequest, seconds_to_cron
 from plugins.base import get_modules_buttons
+
+log = logging.getLogger(__name__)
 
 
 @dataclass
 class MonitoringModule(BotModule):
     # store client in memory for monitoring callback method
     # (store as class attribute - so the module instance doesn't have it)
-    tg_client = None
+    temp_client = None
 
     instagram_media_type_choice_text: str = field(init=False)
     subscribe_confirmation_text: str = field(init=False)
@@ -159,7 +160,8 @@ async def handle_my_monitoring(client: Client, update: CallbackQuery | Message) 
              [InlineKeyboardButton(module.return_button, callback_data=module.return_button)]]))
 
 
-@Client.on_callback_query((filters.regex('^account') | filters.regex('^RETURN_TO_EDIT')) & conversation_filter(module.name))
+@Client.on_callback_query(
+    (filters.regex('^account') | filters.regex('^RETURN_TO_EDIT')) & conversation_filter(module.name))
 async def edit_my_monitoring_request(client: Client, callback_query: CallbackQuery) -> None:
     if 'RETURN_TO_EDIT' in callback_query.data:
         user_data = callback_query.data.replace('RETURN_TO_EDIT_', '').split('_')
@@ -309,9 +311,6 @@ async def delete_my_monitoring_request(client: Client, callback_query: CallbackQ
 @handle_trottling_decorator
 @handle_common_exceptions_decorator
 async def callback(client: Client, update: CallbackQuery | Message) -> None:
-    # init tg client for monitoring job
-    MonitoringModule.tg_client = client
-
     # response with modules's introduction text
     user_requests = await UserMonitoringDataDBConnector.get_all_user_monitorings(update.from_user.id)
 
@@ -512,25 +511,35 @@ async def handle_user_link_input(client: Client, message: Message) -> None:
 
 
 async def send_monitoring_message_to_user(chat_id: int, message: str, media: ThirdPartyAPIClientAnswer = None) -> None:
-    if MonitoringModule.tg_client:
+    try:
+        if not MonitoringModule.temp_client or not MonitoringModule.temp_client.is_connected:
+            MonitoringModule.temp_client = Client(
+                'monitoring_client',
+                api_id=settings.API_ID,
+                api_hash=settings.API_HASH,
+                bot_token=settings.BOT_TOKEN,
+            )
+            await MonitoringModule.temp_client.start()
         if media:
             for item in media.items:
                 match item.media_type:
                     case ThirdPartyAPIMediaType.photo:
-                        await MonitoringModule.tg_client.send_photo(
+                        await MonitoringModule.temp_client.send_photo(
                             chat_id=chat_id,
                             caption=message,
                             photo=item.media_url,
                             reply_markup=module.result_keyboard,
                         )
                     case ThirdPartyAPIMediaType.video:
-                        await MonitoringModule.tg_client.send_video(
+                        await MonitoringModule.temp_client.send_video(
                             chat_id=chat_id,
                             caption=message,
                             video=item.media_url,
                             reply_markup=module.result_keyboard,
                         )
         else:
-            await MonitoringModule.tg_client.send_message(chat_id=chat_id, text=message)
-    else:
-        logging.error('tg_client in monitoring module is None')
+            await MonitoringModule.temp_client.send_message(chat_id=chat_id, text=message)
+    except ConnectionError as exc:
+        log.warning('Failed to connect temp tg client: %s', exc)
+        if MonitoringModule.temp_client.is_connected:
+            await MonitoringModule.temp_client.stop()

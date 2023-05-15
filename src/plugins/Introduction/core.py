@@ -16,9 +16,9 @@ from common.decorators import (
     handle_common_exceptions_decorator,
     inform_user_decorator,
 )
-from plugins.Monitoring.core import module as monitoring_module, MonitoringModule
 from db.connector import database_connector
 from models import BotModule
+from plugins.Monitoring.core import module as monitoring_module
 from ..Monitoring.utils import current_message_filter
 from ..base import callback as base_callback
 from ..base import get_modules_buttons
@@ -68,7 +68,6 @@ module = IntroductionModule(name='introduction')
 @handle_trottling_decorator
 @inform_user_decorator
 async def callback(client: Client, update: CallbackQuery | Message) -> None:
-    MonitoringModule.tg_client = client
     # save or update the user in DB
     userdata = dict(
         user_id=update.from_user.id,
